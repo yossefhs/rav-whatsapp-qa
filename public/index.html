@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavQA - Assistant Halakhique IA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        /* Light Mode */
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(0, 0, 0, 0.02);
+            --bg-glass: rgba(0, 0, 0, 0.03);
+            --border: rgba(0, 0, 0, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: rgba(30, 41, 59, 0.7);
+            --text-muted: rgba(30, 41, 59, 0.5);
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .theme-icon {
+            font-size: 18px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 8px;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-badge {
+            font-size: 10px;
+            background: var(--accent);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+            color: var(--accent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .stats-card {
+            margin-top: auto;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .stats-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 32px 48px;
+            max-width: 1200px;
+        }
+
+        /* Search Hero */
+        .search-hero {
+            margin-bottom: 40px;
+        }
+
+        .search-hero h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-hero p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Search Box */
+        .search-container {
+            position: relative;
+            margin-top: 24px;
+        }
+
+        .search-box {
+            width: 100%;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            padding-right: 140px;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-50%) scale(1.02);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Search Mode Toggle */
+        .search-mode-toggle {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15));
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .mode-btn.active[data-mode="rag"] {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+            border-color: var(--success);
+            color: var(--success);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .mode-btn.active[data-mode="ai"] {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(192, 132, 252, 0.15));
+            border-color: #a855f7;
+            color: #a855f7;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+
+        .mode-description {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 12px;
+            min-height: 20px;
+            font-style: italic;
+            transition: opacity 0.3s;
+        }
+
+        /* Results */
+        .results {
+            margin-top: 40px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .results-count {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Result Card */
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+
+        .result-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-question {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .result-answer {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .result-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .audio-btn {
+            background: linear-gradient(135deg, var(--success), #059669);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .audio-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone.uploading {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .upload-text strong {
+            color: var(--accent);
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .upload-progress.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-glass);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .upload-result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .upload-result.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .upload-result.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        /* View toggle */
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+            padding-right: 16px;
+        }
+
+        .modal-close {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-section {
+            margin-bottom: 24px;
+        }
+
+        .modal-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .modal-content {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 15px;
+            white-space: pre-wrap;
+        }
+
+        .modal-audio {
+            margin-top: 16px;
+        }
+
+        .modal-audio audio {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .modal-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Share Section */
+        .share-section {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .share-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .share-btn.whatsapp:hover {
+            background: rgba(37, 211, 102, 0.15);
+            border-color: #25d366;
+            color: #25d366;
+        }
+
+        .share-btn.copy:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .share-btn.email:hover {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        /* Validation Section */
+        .validation-section {
+            margin-top: 24px;
+            padding: 20px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .validation-prompt {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .validation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .validate-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .validate-btn.valid {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .validate-btn.valid:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+
+        .validate-btn.invalid {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .validate-btn.invalid:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            transform: scale(1.05);
+        }
+
+        .validation-done {
+            color: var(--success);
+            font-weight: 500;
+            padding: 12px;
+        }
+
+        /* AI Response Styles */
+        .ai-response {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .ai-icon {
+            font-size: 24px;
+        }
+
+        .ai-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #a855f7;
+            flex: 1;
+        }
+
+        .ai-confidence {
+            background: rgba(168, 85, 247, 0.15);
+            color: #a855f7;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ai-answer {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 15px;
+            margin-bottom: 16px;
+            white-space: pre-wrap;
+        }
+
+        .ai-answer .source-ref {
+            color: #a855f7;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ai-disclaimer {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .ai-sources {
+            margin-top: 20px;
+        }
+
+        .sources-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .source-card {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .source-card:hover {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.05);
+        }
+
+        .source-num {
+            color: #a855f7;
+            font-weight: 700;
+            font-size: 14px;
+            min-width: 30px;
+        }
+
+        .source-content {
+            flex: 1;
+        }
+
+        .source-question {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .source-answer {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .source-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .similarity {
+            color: var(--success);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .has-audio {
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        .ai-validation {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 24px 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <span class="logo-text">RavQA<span class="logo-badge">AI</span></span>
+            </div>
+
+            <nav class="nav">
+                <a href="#" class="nav-item active" data-view="search">
+                    <span class="nav-icon">🔍</span>
+                    <span>Recherche</span>
+                </a>
+                <a href="#" class="nav-item" data-view="messages">
+                    <span class="nav-icon">💬</span>
+                    <span>Messages</span>
+                </a>
+                <a href="#" class="nav-item" data-view="audio">
+                    <span class="nav-icon">🎵</span>
+                    <span>Audio</span>
+                </a>
+                <a href="#" class="nav-item" data-view="upload">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload ZIP</span>
+                </a>
+            </nav>
+
+            <div class="stats-card">
+                <div class="stats-title">Statistiques</div>
+                <div class="stat-row">
+                    <span>Messages</span>
+                    <span class="stat-value" id="stat-total">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>Réponses</span>
+                    <span class="stat-value" id="stat-answered">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>Audio</span>
+                    <span class="stat-value" id="stat-audio">-</span>
+                </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="theme-toggle" id="themeToggle">
+                <span class="theme-icon" id="themeIcon">🌙</span>
+                <span id="themeLabel">Mode Nuit</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="search-hero">
+                <h1>Assistant Halakhique IA</h1>
+                <p>Recherchez dans les enseignements du Rav Abichid</p>
+
+                <div class="search-container">
+                    <input type="text" class="search-box" id="searchInput"
+                        placeholder="Posez votre question halakhique..." autocomplete="off">
+                    <button class="search-btn" id="searchBtn">
+                        <span>✨</span>
+                        Rechercher
+                    </button>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-btn" data-query="lait viande bassar halavi">🥩🥛 Cacherout Lait/Viande</button>
+                    <button class="quick-btn" data-query="chabbat shabbat">🕯️ Chabbat</button>
+                    <button class="quick-btn" data-query="prière bénédiction berakha">🙏 Prières</button>
+                    <button class="quick-btn" data-query="nida mikvé pureté">💧 Nida</button>
+                    <button class="quick-btn" data-query="mariage kiddoushin">💍 Mariage</button>
+                </div>
+
+                <!-- Search Mode Toggle -->
+                <div class="search-mode-toggle">
+                    <button class="mode-btn active" id="modeFTS" data-mode="fts"
+                        title="Recherche par mots-clés exacts dans toute la base">
+                        🔍 Recherche rapide
+                    </button>
+                    <button class="mode-btn" id="modeRAG" data-mode="rag"
+                        title="Comprend le sens de la question (Vector Search)">
+                        🧠 IA Sémantique
+                    </button>
+                    <button class="mode-btn" id="modeAI" data-mode="ai"
+                        title="Synthèse intelligente avec sources citées (GPT)">
+                        🤖 Assistant IA
+                    </button>
+                </div>
+                <div class="mode-description" id="modeDescription">
+                    Recherche simple par mots-clés exacts (ex: "micro-onde")
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+
+            <div class="results" id="results"></div>
+
+            <!-- Upload View -->
+            <div class="view" id="uploadView">
+                <h1
+                    style="font-size: 28px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    Upload WhatsApp</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Importez un export ZIP de conversation
+                    WhatsApp</p>
+
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📦</div>
+                    <div class="upload-text">
+                        <strong>Glissez un fichier ZIP</strong> ou cliquez pour sélectionner
+                    </div>
+                    <input type="file" id="fileInput" accept=".zip" style="display: none;">
+
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <p style="margin-top: 8px; font-size: 13px; color: var(--text-muted);" id="uploadStatus">
+                            Importation en cours...</p>
+                    </div>
+                </div>
+
+                <div class="upload-result" id="uploadResult"></div>
+
+                <div
+                    style="margin-top: 24px; padding: 16px; background: var(--bg-glass); border-radius: 12px; border: 1px solid var(--border);">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">💡 Comment exporter depuis
+                        WhatsApp</h3>
+                    <ol style="font-size: 13px; color: var(--text-secondary); padding-left: 20px; line-height: 1.8;">
+                        <li>Ouvrir le groupe WhatsApp</li>
+                        <li>Menu ⋮ → Plus → Exporter discussion</li>
+                        <li>Choisir "Inclure les médias"</li>
+                        <li>Sauvegarder le fichier .zip</li>
+                    </ol>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal Vue Détaillée -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title" id="modalTitle">Question</div>
+                    <button class="modal-close" id="modalClose">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <div class="modal-label">📝 Question</div>
+                        <div class="modal-content" id="modalQuestion">-</div>
+                    </div>
+                    <div class="modal-section">
+                        <div class="modal-label">💬 Réponse complète</div>
+                        <div class="modal-content" id="modalAnswer">-</div>
+                    </div>
+                    <div class="modal-audio" id="modalAudioSection" style="display:none;">
+                        <div class="modal-label">🎵 Audio</div>
+                        <audio controls id="modalAudioPlayer"></audio>
+                    </div>
+                    <div class="modal-meta" id="modalMeta"></div>
+
+                    <!-- Share Buttons -->
+                    <div class="share-section">
+                        <div class="modal-label">📤 Partager</div>
+                        <div class="share-buttons">
+                            <button class="share-btn whatsapp" onclick="shareWhatsApp()">
+                                <span>💬</span> WhatsApp
+                            </button>
+                            <button class="share-btn copy" onclick="copyToClipboard()">
+                                <span>📋</span> Copier
+                            </button>
+                            <button class="share-btn email" onclick="shareEmail()">
+                                <span>✉️</span> Email
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Validation Section -->
+                    <div class="validation-section" id="validationSection">
+                        <div class="validation-prompt">
+                            🤖 Veuillez valider la réponse pour aider à entraîner le bot
+                        </div>
+                        <div class="validation-buttons" id="validationButtons">
+                            <button class="validate-btn valid" onclick="validateResponse(true)">
+                                <span>👍</span> Réponse correcte
+                            </button>
+                            <button class="validate-btn invalid" onclick="validateResponse(false)">
+                                <span>👎</span> À améliorer
+                            </button>
+                        </div>
+                        <div class="validation-done" id="validationDone" style="display:none;">
+                            ✅ Merci pour votre contribution !
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentView = 'search';
+        let currentAudio = null;
+        let searchMode = 'fts'; // 'fts' = Full Text Search, 'rag' = Semantic RAG
+
+        // Elements
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsDiv = document.getElementById('results');
+        const loadingDiv = document.getElementById('loading');
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.total?.toLocaleString() || '-';
+                document.getElementById('stat-answered').textContent = data.with_answer?.toLocaleString() || '-';
+                document.getElementById('stat-audio').textContent = data.with_audio?.toLocaleString() || '-';
+            } catch (e) {
+                console.error('Stats error:', e);
+            }
+        }
+
+        // Search - supports FTS, RAG and AI modes
+        async function search(query) {
+            if (!query || query.length < 2) return;
+
+            loadingDiv.classList.add('active');
+            resultsDiv.innerHTML = '';
+
+            try {
+                let data;
+
+                if (searchMode === 'ai') {
+                    // AI Assistant (GPT + Sources)
+                    const res = await fetch('/api/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question: query, limit: 5 })
+                    });
+                    const aiData = await res.json();
+                    renderAIResponse(aiData);
+                    return;
+                } else if (searchMode === 'rag') {
+                    // RAG Semantic Search (Qdrant + OpenAI)
+                    const res = await fetch(`/api/rag-search?q=${encodeURIComponent(query)}&limit=10`);
+                    const ragData = await res.json();
+
+                    // Transform RAG results to match FTS format
+                    data = {
+                        results: (ragData.results || []).map(r => ({
+                            id: r.id,
+                            question: r.question,
+                            answer: r.answer,
+                            hasAudio: !!r.audio_url,
+                            audioUrl: r.audio_url,
+                            confidence: r.confidence
+                        })),
+                        mode: 'rag',
+                        stats: ragData.stats
+                    };
+                } else {
+                    // FTS Search (SQLite)
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`);
+                    data = await res.json();
+                    data.mode = 'fts';
+                }
+
+                renderResults(data.results, query, data.mode, data.stats);
+            } catch (e) {
+                resultsDiv.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>Erreur de recherche</p></div>`;
+            } finally {
+                loadingDiv.classList.remove('active');
+            }
+        }
+
+        // Render AI Assistant Response
+        function renderAIResponse(data) {
+            loadingDiv.classList.remove('active');
+
+            if (!data.success) {
+                resultsDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🤖</div>
+                        <p>${data.answer || 'Erreur de génération'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="ai-response">
+                    <div class="ai-header">
+                        <span class="ai-icon">🤖</span>
+                        <span class="ai-title">Réponse de l'Assistant IA</span>
+                        <span class="ai-confidence">${data.confidence}% confiance</span>
+                    </div>
+                    <div class="ai-answer">${escapeHtml(data.answer).replace(/\[(\d+)\]/g, '<sup class="source-ref">[$1]</sup>')}</div>
+                    <div class="ai-disclaimer">${data.disclaimer}</div>
+                    
+                    <div class="ai-sources">
+                        <div class="sources-header">📚 Sources utilisées (${data.sources.length})</div>
+                        ${data.sources.map(s => `
+                            <div class="source-card" onclick="openModal(${s.id})">
+                                <div class="source-num">[${s.index}]</div>
+                                <div class="source-content">
+                                    <div class="source-question">${escapeHtml(s.question)}</div>
+                                    <div class="source-answer">${escapeHtml(s.answer)}</div>
+                                    <div class="source-meta">
+                                        <span class="similarity">${s.similarity}% match</span>
+                                        ${s.hasAudio ? '<span class="has-audio">🎵 Audio</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="ai-validation">
+                        <span>Cette réponse est-elle utile ?</span>
+                        <button class="validate-btn valid" onclick="validateAIResponse(true)">👍 Oui</button>
+                        <button class="validate-btn invalid" onclick="validateAIResponse(false)">👎 Non</button>
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Validate AI response
+        async function validateAIResponse(isValid) {
+            try {
+                await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'ai_response',
+                        isValid: isValid,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (e) { }
+
+            const validation = document.querySelector('.ai-validation');
+            validation.innerHTML = '<span style="color: var(--success);">✅ Merci pour votre retour !</span>';
+        }
+
+        // Search Mode Toggle
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                searchMode = btn.dataset.mode;
+
+                // Re-search if there's a query
+                const query = searchInput.value;
+                if (query.length >= 2) {
+                    search(query);
+                }
+
+                // Update description
+                const descEl = document.getElementById('modeDescription');
+                descEl.style.opacity = '0';
+
+                setTimeout(() => {
+                    let text = '';
+                    switch (searchMode) {
+                        case 'fts': text = 'Recherche simple par mots-clés exacts (ex: "micro-onde")'; break;
+                        case 'rag': text = 'Recherche intelligente par concept et sens (Vector Search)'; break;
+                        case 'ai': text = 'Assistant IA qui synthétise une réponse avec sources citées'; break;
+                    }
+                    descEl.textContent = text;
+                    descEl.style.opacity = '1';
+                }, 150);
+            });
+        });
+
+        // Render results
+        function renderResults(results, query, mode = 'fts', stats = null) {
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>Aucun résultat pour "${query}"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const modeLabel = mode === 'rag' ? '🧠 IA Sémantique' : '🔍 Recherche rapide';
+            const modeClass = mode === 'rag' ? 'rag-mode' : 'fts-mode';
+
+            let html = `
+                <div class="results-header">
+                    <span class="results-title">Résultats</span>
+                    <span class="results-count">${results.length} réponse(s) • ${modeLabel}</span>
+                </div>
+            `;
+
+            if (mode === 'rag' && stats) {
+                html += `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">⚡ ${stats.duration}ms • ${stats.total_found} trouvés • ${stats.validated} validés</div>`;
+            }
+
+            results.forEach(r => {
+                const answer = r.answer ? (r.answer.length > 300 ? r.answer.substring(0, 300) + '...' : r.answer) : 'Cliquez pour voir la réponse →';
+                const date = r.date ? new Date(r.date).toLocaleDateString('fr-FR') : '';
+                const confidenceBadge = r.confidence ? `<span class="result-tag" style="background:rgba(16,185,129,0.15);color:#10b981;">✓ ${Math.round(r.confidence * 100)}%</span>` : '';
+
+                html += `
+                    <div class="result-card" onclick="openModal(${r.id})" style="cursor:pointer;">
+                        <div class="result-question">${escapeHtml(r.question) || 'Question'}</div>
+                        <div class="result-answer">${escapeHtml(answer)}</div>
+                        <div class="result-meta">
+                            ${date ? `<span>📅 ${date}</span>` : ''}
+                            ${r.hasAudio ? `<span class="result-tag">🎵 Audio</span>` : ''}
+                            ${confidenceBadge}
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Play audio
+        function playAudio(url) {
+            if (currentAudio) {
+                currentAudio.pause();
+            }
+            currentAudio = new Audio(url);
+            currentAudio.play();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+        }
+
+        // Modal functions
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalClose = document.getElementById('modalClose');
+
+        async function openModal(id) {
+            currentMessageId = id; // Store for validation
+
+            // Reset validation state
+            document.getElementById('validationButtons').style.display = 'flex';
+            document.getElementById('validationDone').style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/messages/${id}`);
+                const data = await res.json();
+
+                document.getElementById('modalTitle').textContent = data.question || 'Réponse du Rav';
+                document.getElementById('modalQuestion').textContent = data.question || '-';
+                document.getElementById('modalAnswer').textContent = data.answer || data.rawAnswer || 'Pas de transcription disponible';
+
+                const audioSection = document.getElementById('modalAudioSection');
+                const audioPlayer = document.getElementById('modalAudioPlayer');
+
+                if (data.hasAudio && data.audioUrl) {
+                    audioSection.style.display = 'block';
+                    audioPlayer.src = data.audioUrl;
+                } else {
+                    audioSection.style.display = 'none';
+                }
+
+                const date = data.date ? new Date(data.date).toLocaleDateString('fr-FR', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                }) : '';
+                document.getElementById('modalMeta').innerHTML = `
+                    ${date ? `<span>📅 ${date}</span>` : ''}
+                    ${data.group ? `<span>📍 ${data.group}</span>` : ''}
+                `;
+
+                modalOverlay.classList.add('active');
+            } catch (e) {
+                console.error('Erreur chargement détails:', e);
+            }
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            const audioPlayer = document.getElementById('modalAudioPlayer');
+            if (audioPlayer) audioPlayer.pause();
+        }
+
+        // Share functions
+        function getShareText() {
+            const question = document.getElementById('modalQuestion').textContent;
+            const answer = document.getElementById('modalAnswer').textContent;
+            return `❓ Question:\n${question}\n\n💬 Réponse du Rav:\n${answer}\n\n📚 Source: RavQA - Assistant Halakhique`;
+        }
+
+        function shareWhatsApp() {
+            const text = getShareText();
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function copyToClipboard() {
+            const text = getShareText();
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.share-btn.copy');
+                const original = btn.innerHTML;
+                btn.innerHTML = '<span>✅</span> Copié!';
+                btn.style.background = 'rgba(16, 185, 129, 0.2)';
+                btn.style.borderColor = '#10b981';
+                btn.style.color = '#10b981';
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.style = '';
+                }, 2000);
+            });
+        }
+
+        function shareEmail() {
+            const question = document.getElementById('modalQuestion').textContent;
+            const answer = document.getElementById('modalAnswer').textContent;
+            const subject = encodeURIComponent('Question Halakhique - RavQA');
+            const body = encodeURIComponent(`Question:\n${question}\n\nRéponse du Rav:\n${answer}`);
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        }
+
+        // Validation function
+        let currentMessageId = null;
+
+        async function validateResponse(isValid) {
+            if (!currentMessageId) return;
+
+            try {
+                await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messageId: currentMessageId,
+                        isValid: isValid,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (e) {
+                console.log('Feedback enregistré localement');
+            }
+
+            // Show thank you message
+            document.getElementById('validationButtons').style.display = 'none';
+            document.getElementById('validationDone').style.display = 'block';
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Events
+        searchBtn.addEventListener('click', () => search(searchInput.value));
+        searchInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') search(searchInput.value);
+        });
+
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const query = btn.dataset.query;
+                searchInput.value = query;
+                search(query);
+            });
+        });
+
+        // Navigation multi-vues
+        const views = {
+            search: document.querySelector('.search-hero'),
+            upload: document.getElementById('uploadView')
+        };
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const viewName = item.dataset.view;
+
+                // Update nav active
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+
+                // Toggle views
+                if (viewName === 'search') {
+                    document.querySelector('.search-hero').style.display = 'block';
+                    document.getElementById('uploadView').style.display = 'none';
+                    document.getElementById('results').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                } else if (viewName === 'upload') {
+                    document.querySelector('.search-hero').style.display = 'none';
+                    document.getElementById('uploadView').style.display = 'block';
+                    document.getElementById('results').style.display = 'none';
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    // Messages et Audio font recherche filtrée
+                    document.querySelector('.search-hero').style.display = 'block';
+                    document.getElementById('uploadView').style.display = 'none';
+                    document.getElementById('results').style.display = 'block';
+                }
+            });
+        });
+
+        // Upload functionality
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadResult = document.getElementById('uploadResult');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.zip')) {
+                uploadFile(file);
+            } else {
+                showUploadError('Seuls les fichiers .zip sont acceptés');
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) {
+                uploadFile(fileInput.files[0]);
+            }
+        });
+
+        async function uploadFile(file) {
+            uploadZone.classList.add('uploading');
+            uploadProgress.classList.add('active');
+            uploadResult.className = 'upload-result';
+            progressFill.style.width = '20%';
+            uploadStatus.textContent = `Upload de ${file.name}...`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // 1. Démarrer l'upload (avec XHR pour progress bar)
+                const data = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/upload');
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            progressFill.style.width = Math.min(95, percent) + '%';
+                            uploadStatus.textContent = `Upload en cours : ${Math.round(percent)}% (${(e.loaded / 1024 / 1024).toFixed(1)}MB)`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            reject(new Error(`Upload failed: ${xhr.statusText}`));
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+                    xhr.send(formData);
+                });
+
+                if (!data.success || !data.jobId) {
+                    throw new Error(data.error || 'Erreur lors de l\'upload');
+                }
+
+                // 2. Mode Polling (Background Job)
+                uploadStatus.textContent = 'Traitement en cours (Transcription IA & Analyse)...';
+                progressFill.style.width = '40%';
+
+                // Polling toutes les 1.5s
+                const startTime = Date.now();
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch(`/api/upload/status/${data.jobId}`);
+                        const job = await statusRes.json();
+
+                        if (job.status === 'completed') {
+                            clearInterval(pollInterval);
+                            progressFill.style.width = '100%';
+                            uploadStatus.textContent = 'Import terminé !';
+                            uploadResult.className = 'upload-result success';
+
+                            const r = job.result;
+                            uploadResult.innerHTML = `
+                                <strong>✅ Import terminé avec succès</strong><br>
+                                📄 Fichier: ${job.file}<br>
+                                📝 Messages: ${r.imported || 0}<br>
+                                🎵 Audios liés: ${r.audio_linked || 0}<br>
+                                🎙️ Transcriptions: ${r.transcribed || 0}<br>
+                                🛡️ Doublons: ${r.skipped_dup || 0}
+                            `;
+                            loadStats(); // Rafraîchir stats globales
+
+                            // Cleanup UI
+                            setTimeout(() => {
+                                uploadZone.classList.remove('uploading');
+                                uploadProgress.classList.remove('active');
+                            }, 5000);
+
+                        } else if (job.status === 'error') {
+                            clearInterval(pollInterval);
+                            throw new Error(job.error || 'Erreur inconnue pendant le traitement');
+                        } else {
+                            // En cours... calcul ETA
+                            const p = job.progress;
+                            let statusText = 'Traitement en cours...';
+                            let percent = 40;
+
+                            if (p) {
+                                if (p.state === 'extracting') { statusText = 'Extraction ZIP...'; percent = 45; }
+                                else if (p.state === 'scanning') { statusText = 'Analyse audios...'; percent = 50; }
+                                else if (p.state === 'parsing') { statusText = 'Lecture converstion...'; percent = 55; }
+                                else if (p.state === 'processing' || p.state === 'transcribing') {
+                                    // Calcul % réel basé sur lignes traitées
+                                    if (p.total > 0) {
+                                        const processingPercent = (p.processed / p.total) * 100;
+                                        // Mappe 0-100% processing vers 60-98% global
+                                        percent = 60 + (processingPercent * 0.38);
+
+                                        // Calcul ETA simple (Vitesse moyenne)
+                                        const elapsed = (Date.now() - startTime) / 1000; // secondes
+                                        if (p.processed > 50) { // Attendre un peu pour stabiliser
+                                            const rate = p.processed / elapsed; // msg/sec
+                                            const remaining = p.total - p.processed;
+                                            const etaSec = remaining / rate;
+
+                                            // Formatage temps
+                                            let timeStr = '';
+                                            if (etaSec > 60) timeStr = `~${Math.ceil(etaSec / 60)} min`;
+                                            else timeStr = `~${Math.ceil(etaSec)} sec`;
+
+                                            statusText = `${p.message} (ETA: ${timeStr})`;
+                                        } else {
+                                            statusText = p.message;
+                                        }
+                                    }
+                                }
+                            }
+
+                            progressFill.style.width = Math.min(98, percent) + '%';
+                            uploadStatus.textContent = statusText;
+                        }
+                    } catch (err) {
+                        console.error('Polling error', err);
+                    }
+                }, 1500);
+
+            } catch (e) {
+                showUploadError(e.message);
+            }
+        }
+
+        function showUploadError(message) {
+            uploadResult.className = 'upload-result error';
+            uploadResult.innerHTML = `<strong>❌ Erreur</strong><br>${message}`;
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeLabel = document.getElementById('themeLabel');
+
+        function setTheme(theme) {
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                themeIcon.textContent = '☀️';
+                themeLabel.textContent = 'Mode Jour';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                themeIcon.textContent = '🌙';
+                themeLabel.textContent = 'Mode Nuit';
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            setTheme(currentTheme === 'light' ? 'dark' : 'light');
+        });
+
+        // Init
+        loadStats();
+    </script>
+</body>
+
+</html>

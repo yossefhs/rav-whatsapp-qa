@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #f0f2f5; }
+        #qrcode { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { margin-bottom: 20px; color: #333; }
+        .status { color: green; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Scanner pour connecter le Bot</h1>
+    <div id="qrcode"></div>
+    <div class="status">Code mis à jour à 2:21:59 PM</div>
+    <script>
+        new QRCode(document.getElementById("qrcode"), {
+            text: "2@TSDxoKmCO30Y9e2cyvd1N7ob9ASHeTeUVLkcG3aqQrmhThWfJJyeQJqUe3BZXpU/tU/qmGX5R+CS4MVIy0Rx2bp2K6jVvBPFAyk=,W1zGO42POyvCz+wZarPS5EElJLN/v3NYXEG37kTmS30=,IoMEDo7pnriUPnIEyCwcQTe2AQlY6u2H6suod8tleR0=,J6b30zMWM7rpIzJH3Y+YEqDykmISpV+FJSANpjmNkro=,1",
+            width: 300,
+            height: 300
+        });
+        setTimeout(() => location.reload(), 5000);
+    </script>
+</body>
+</html>

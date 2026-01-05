@@ -1,0 +1,14 @@
+node_modules
+.git
+.ds_store
+.env
+media
+uploads
+qr.png
+.ravbot
+temp_import_*
+npm-debug.log
+worker-*.txt
+*.mp3
+*.ogg
+*.zip
