@@ -140,7 +140,26 @@ async function runSmartCatchUp() {
 // EVENTS
 // ===============
 
+const PHONE_NUMBER = process.env.LINK_PHONE_NUMBER;
+
 client.on('qr', async (qr) => {
+  // Mode Appairage par Code (Plus stable pour le cloud)
+  if (PHONE_NUMBER && !global.pairingCodeRequested) {
+    global.pairingCodeRequested = true;
+    console.log(`📞 Demande de code d'appairage pour ${PHONE_NUMBER}...`);
+    try {
+      const code = await client.requestPairingCode(PHONE_NUMBER);
+      console.log('--------------------------------------------------');
+      console.log('🔑 CODE D\'APPAIRAGE WHATSAPP : ' + code);
+      console.log('👉 Sur votre téléphone : Réglages > Appareils connectés > Connecter > "Se connecter avec le numéro"');
+      console.log('--------------------------------------------------');
+    } catch (e) {
+      console.error('Erreur Pairing Code:', e);
+    }
+    return;
+  }
+
+  // Fallback QR Code
   console.log('📷 QR Code received');
   console.log('SCAN THIS STRING IF IMAGE FAILS:');
   console.log(qr);
