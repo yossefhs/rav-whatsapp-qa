@@ -135,9 +135,18 @@ async function runSmartCatchUp() {
 
 client.on('qr', async (qr) => {
   console.log('📷 QR Code received');
-  qrcode.generate(qr, { small: true });
+  console.log('SCAN THIS STRING IF IMAGE FAILS:');
+  console.log(qr);
+  console.log('--------------------------------');
+  try {
+    qrcode.generate(qr, { small: true });
+  } catch (e) {
+    console.error('QR Terminal Generation Error:', e);
+  }
+
   try {
     await QRCode.toFile('./qr.png', qr);
+    // Visual fallback for MacOS only
     if (process.platform === 'darwin') require('child_process').exec('open ./qr.png');
   } catch (e) {
     console.error('QR File Error:', e);
