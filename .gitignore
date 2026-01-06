@@ -1,7 +1,8 @@
 node_modules
 .DS_Store
 .env
-media
+!media/
+media/*.zip
 uploads
 qr.png
 .ravbot
