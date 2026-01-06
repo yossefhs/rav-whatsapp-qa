@@ -8,7 +8,14 @@ const Database = require('better-sqlite3');
 const halakhaAi = require('./halakha_ai'); // IA Locale
 const OpenAI = require('openai'); // IA Cloud
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  try {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  } catch (e) {
+    console.error('OpenAI Init Error:', e.message);
+  }
+}
 const { processMessage } = require('./message_processor');
 
 // Configuration
@@ -186,6 +193,10 @@ client.on('message', async msg => {
         const rep = await halakhaAi.get_halakha_response(prompt, true);
         if (rep) await msg.reply(`🤖 *RavAI:* ${rep}`);
       } else if (msg.body.startsWith('!gpt')) {
+        if (!openai) {
+          await msg.reply('❌ OpenAI non configuré (Clé manquante)');
+          return;
+        }
         const prompt = msg.body.substring(5).trim();
         const completion = await openai.chat.completions.create({
           model: process.env.MODEL_GPT || "gpt-4o-mini",

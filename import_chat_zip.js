@@ -17,8 +17,14 @@ const OpenAI = require('openai');
 const DB_PATH = process.env.DB_PATH || './ravqa.db';
 const MEDIA_DIR = process.env.MEDIA_DIR || './media';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+let openai = null;
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+function getOpenAI() {
+    if (!openai && OPENAI_API_KEY) {
+        openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+    }
+    return openai;
+}
 
 // =============================================================================
 // PARSERS
@@ -105,12 +111,14 @@ function findAudioFiles(dir) {
 // TRANSCRIPTION
 // =============================================================================
 
-async function transcribeAudio(filePath) {
-    if (!OPENAI_API_KEY) return null;
+async function transcribeAudio(audioPath) {
+    const ai = getOpenAI();
+    if (!ai) return null; // Pas de clé API = pas de transcription
+
     try {
-        console.log(`🎙️ Transcription de ${path.basename(filePath)}...`);
-        const transcription = await openai.audio.transcriptions.create({
-            file: fs.createReadStream(filePath),
+        console.log(`🎙️ Transcription de ${path.basename(audioPath)}...`);
+        const transcription = await ai.audio.transcriptions.create({
+            file: fs.createReadStream(audioPath),
             model: "whisper-1",
             language: "fr" // Optimisation pour français
         });
