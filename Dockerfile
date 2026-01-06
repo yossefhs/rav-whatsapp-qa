@@ -2,6 +2,7 @@ FROM node:18-slim
 
 # Installation des dépendances pour Puppeteer (Chrome) et FFmpeg
 RUN apt-get update && apt-get install -y \
+    git \
     chromium \
     ffmpeg \
     fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
