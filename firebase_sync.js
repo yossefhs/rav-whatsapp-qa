@@ -24,23 +24,31 @@ class FirebaseSync {
                 return;
             }
 
-            // Load credentials
-            const credPath = process.env.FIREBASE_CREDENTIALS_PATH ||
-                path.join(__dirname, 'firebase-credentials.json');
+            // Firebase Sync (Optionnel - Désactivé si pas de credentials)
+            let firebaseApp = null;
+            try {
+                // Check if credentials path is provided, otherwise skip Firebase initialization
+                const credPath = process.env.FIREBASE_CREDENTIALS_PATH || path.join(__dirname, 'firebase-credentials.json');
+                const serviceAccount = require(credPath); // This will throw if file doesn't exist
 
-            const serviceAccount = require(credPath);
+                firebaseApp = admin.initializeApp({
+                    credential: admin.credential.cert(serviceAccount),
+                    databaseURL: process.env.FIREBASE_DATABASE_URL,
+                    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+                });
 
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                databaseURL: process.env.FIREBASE_DATABASE_URL,
-                storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-            });
+                this.ref = admin.database().ref('qa_pairs');
+                this.bucket = admin.storage().bucket();
+                this.initialized = true;
+                console.log('✅ Firebase initialized successfully');
 
-            this.ref = admin.database().ref('qa_pairs');
-            this.bucket = admin.storage().bucket();
-            this.initialized = true;
+            } catch (credError) {
+                // If credentials file is not found or other credential error, log and disable Firebase
+                console.log(`⚠️ Firebase initialization skipped: ${credError.message}. Running in SQLite-only mode.`);
+                this.initialized = false;
+                // No need to re-throw, just proceed without Firebase
+            }
 
-            console.log('✅ Firebase initialized successfully');
         } catch (error) {
             console.error('❌ Firebase initialization failed:', error.message);
             console.log('⚠️  Falling back to SQLite-only mode');
