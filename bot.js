@@ -142,7 +142,8 @@ async function runSmartCatchUp() {
 // EVENTS
 // ===============
 
-const PHONE_NUMBER = process.env.LINK_PHONE_NUMBER;
+// Hardcode temporaire pour forcer l'appairage
+const PHONE_NUMBER = '972546314770'; // process.env.LINK_PHONE_NUMBER;
 
 client.on('qr', async (qr) => {
   // Mode Appairage par Code (Plus stable pour le cloud)
