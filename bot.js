@@ -29,7 +29,7 @@ const GROUPS = [process.env.GROUP_1, process.env.GROUP_2].filter(Boolean);
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: 'rav' }),
   puppeteer: {
-    headless: true,
+    headless: true, // 'new' est le nouveau standard, mais true marche souvent mieux sur les vieux images
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -37,8 +37,10 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
+      '--single-process', // Important pour Docker léger
       '--disable-gpu'
-    ]
+    ],
+    timeout: 60000 // Augmenter le timeout
   },
   authTimeoutMs: 60000
 });
