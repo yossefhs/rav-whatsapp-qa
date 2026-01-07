@@ -1,8 +1,11 @@
 require('dotenv').config();
 const Redis = require('ioredis');
 
-// Configuration Redis depuis .env
-const redisClient = new Redis(process.env.REDIS_URL, {
+// Configuration Redis
+// Fallback Hardcodé car Railway semble avoir du mal avec la variable d'env
+const REDIS_URL = process.env.REDIS_URL || 'redis://default:nS9ovE7uWCYi7sh78ChdFQ6oLmg9amRk@redis-15829.c247.eu-west-1-1.ec2.cloud.redislabs.com:15829';
+
+const redisClient = new Redis(REDIS_URL, {
   retryStrategy: (times) => {
     const delay = Math.min(times * 50, 2000);
     return delay;
