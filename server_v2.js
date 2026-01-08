@@ -52,6 +52,11 @@ const upload = multer({
 
 // Initialisation
 const app = express();
+const { initBot } = require('./bot'); // Import Bot
+
+// Lancement du Bot (DÉSACTIVÉ TEMPORAIREMENT POUR SILENCE)
+// initBot().catch(err => console.error('❌ Bot Init Error:', err));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -218,6 +223,46 @@ app.get('/api/messages/:id', (req, res) => {
         group: msg.group_name || '',
         sender: msg.sender_name || ''
     });
+});
+
+// ADMIN: Supprimer un message (Soft Delete)
+app.delete('/api/messages/:id', (req, res) => {
+    const db = getDB();
+    try {
+        const info = db.prepare('UPDATE messages SET deleted_at = ? WHERE id = ?')
+            .run(Math.floor(Date.now() / 1000), req.params.id);
+
+        db.close();
+        if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
+
+        console.log(`🗑️ Message ${req.params.id} supprimé.`);
+        res.json({ success: true });
+    } catch (e) {
+        db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ADMIN: Modifier un message
+app.put('/api/messages/:id', (req, res) => {
+    const { question, answer } = req.body;
+    const db = getDB();
+    try {
+        const info = db.prepare(`
+            UPDATE messages 
+            SET question_text = ?, transcript_torah = ?
+            WHERE id = ?
+        `).run(question, answer, req.params.id);
+
+        db.close();
+        if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
+
+        console.log(`✏️ Message ${req.params.id} modifié.`);
+        res.json({ success: true });
+    } catch (e) {
+        db.close();
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // =============================================================================

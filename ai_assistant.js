@@ -6,7 +6,7 @@
 require('dotenv').config();
 const OpenAI = require('openai');
 
-const QDRANT_URL = 'http://localhost:6333';
+const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
 const COLLECTION = 'halakhic_qa';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
