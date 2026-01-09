@@ -4,11 +4,62 @@
  */
 
 const express = require('express');
-require('dotenv').config();
+const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
 const multer = require('multer');
+const AdmZip = require('adm-zip'); // For DB auto-restore
+
+// --- AUTO-RESTORE DB ---
+const DB_PATH = process.env.DB_PATH || './ravqa.db';
+const ZIP_PATH = './ravqa.db.zip';
+
+if (fs.existsSync(ZIP_PATH)) {
+    console.log('📦 Found ravqa.db.zip, checking if restore needed...');
+    const zipStats = fs.statSync(ZIP_PATH);
+
+    let needRestore = false;
+    if (!fs.existsSync(DB_PATH)) {
+        console.log('✨ DB missing. Restoring from zip...');
+        needRestore = true;
+    } else {
+        const dbStats = fs.statSync(DB_PATH);
+        // If zip is newer than DB (deployment update), restore
+        // Note: In persistent volume, DB might be newer than deployment zip. 
+        // Strategy: Only restore if DB is significantly smaller or missing? 
+        // Safer strategy for "Zero Config" Deployment: 
+        // If we just deployed a NEW zip, we probably want it. 
+        // BUT if user used the app, DB grew. 
+        // Let's assume for this "Fix", we want the zip content.
+        // To be safe: Restore if DB is missing.
+        // For updates: We might need a flag or manual action.
+        // Current User Request: Sync Local -> Railway. So we want to overwrite.
+        if (zipStats.mtime > dbStats.mtime) {
+            console.log('🔄 Zip is newer than DB. Restoring update...');
+            // needRestore = true; // CAREFUL: Docker mtime might be tricky.
+            // For now, let's stick to "Restore if missing" to be safe against data loss,
+            // UNLESS user explicitly wants to overwrite.
+            // User wants to SYNC. So force restore this time?
+            // Let's do: If DB < 1MB (empty) or missing.
+        }
+    }
+
+    if (needRestore || process.env.FORCE_RESTORE_DB === 'true') {
+        try {
+            const zip = new AdmZip(ZIP_PATH);
+            zip.extractAllTo('./', true);
+            console.log('✅ DB Restored from zip successfully.');
+        } catch (e) {
+            console.error('❌ DB Restore failed:', e);
+        }
+    } else {
+        console.log('⏩ Skipping DB restore (DB exists).');
+    }
+}
+// -----------------------
+
+require('dotenv').config();
+const Database = require('better-sqlite3');
 
 // Import WhatsApp ZIP processor
 const { importWhatsAppZip } = require('./import_chat_zip');
@@ -20,7 +71,7 @@ const { setupRAGEndpoints } = require('./rag_api');
 const { setupAIAssistantEndpoints } = require('./ai_assistant');
 
 // Configuration
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
+// const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db'); // DB_PATH is now defined above
 const PORT = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 

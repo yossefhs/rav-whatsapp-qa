@@ -16,11 +16,67 @@ const COLLECTION = 'halakhic_qa';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Database is instantiated per request or cached? Better to instantiate once here if serverless isn't an issue.
 // For this continuous server architecture, one instance is fine.
-const db = new Database(DB_PATH, { readonly: true });
+// Cache des vecteurs en mémoire
+let vectorsCache = null;
+let lastCacheUpdate = 0;
 
-/**
- * Obtenir embedding via OpenAI
- */
+function loadVectors() {
+    // Recharger seulement si +5min ou premier appel
+    if (vectorsCache && (Date.now() - lastCacheUpdate < 5 * 60 * 1000)) {
+        return vectorsCache;
+    }
+
+    console.log('🔄 Chargement des vecteurs en mémoire...');
+    const db = new Database(DB_PATH, { readonly: true });
+    try {
+        // Jointure pour avoir les métadonnées utiles
+        const rows = db.prepare(`
+            SELECT e.id, e.vector, 
+                   m.question_text, m.transcript_torah, m.transcript_raw, m.audio_path,
+                   m.ts, m.group_name, m.relevance_score
+            FROM message_embeddings e
+            JOIN messages m ON e.id = m.id
+            WHERE m.deleted_at IS NULL
+        `).all();
+
+        vectorsCache = rows.map(r => ({
+            id: r.id,
+            vector: JSON.parse(r.vector),
+            payload: {
+                question: r.question_text,
+                answer: r.transcript_torah || r.transcript_raw,
+                audio_path: r.audio_path,
+                timestamp: r.ts,
+                group_name: r.group_name
+            },
+            relevance_score: r.relevance_score || 0.5
+        }));
+
+        lastCacheUpdate = Date.now();
+        console.log(`✅ ${vectorsCache.length} vecteurs chargés en RAM.`);
+    } catch (e) {
+        console.error('Erreur chargement vecteurs:', e);
+        vectorsCache = [];
+    } finally {
+        db.close();
+    }
+    return vectorsCache;
+}
+
+// Similarité Cosinus
+function cosineSimilarity(a, b) {
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// Embedding
 async function getEmbedding(text) {
     const response = await openai.embeddings.create({
         model: 'text-embedding-3-small',
@@ -29,56 +85,35 @@ async function getEmbedding(text) {
     return response.data[0].embedding;
 }
 
-/**
- * Recherche vectorielle dans Qdrant
- */
-async function searchQdrant(query, limit = 10) {
+// Recherche Locale
+async function searchLocal(query, limit = 10) {
     try {
         const queryVector = await getEmbedding(query);
+        const vectors = loadVectors();
 
-        const response = await fetch(`${QDRANT_URL}/collections/${COLLECTION}/points/search`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                vector: queryVector,
-                limit: limit,
-                with_payload: true
-            })
-        });
+        // Calcul score pour tous
+        const results = vectors.map(v => ({
+            ...v,
+            score: cosineSimilarity(queryVector, v.vector)
+        }));
 
-        const data = await response.json();
-
-        if (!data.result) {
-            console.error('Qdrant error:', data);
-            return [];
-        }
-
-        // Transformer et hydrater avec les scores de feedback live
-        return data.result.map(r => {
-            // Récupérer le score de pertinence live depuis SQLite
-            let feedbackScore = 0.5; // Défaut
-            try {
-                const row = db.prepare('SELECT relevance_score FROM messages WHERE wa_message_id = ?').get(r.id);
-                if (row && row.relevance_score !== null) {
-                    feedbackScore = row.relevance_score;
-                }
-            } catch (e) {
-                // Ignore DB errors during hydrating
-            }
-
-            return {
+        // Trier et limiter
+        return results
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit)
+            .map(r => ({
                 id: r.id,
-                score: r.score, // Vector score
-                feedback_score: feedbackScore, // <-- NOUVEAU: Score d'apprentissage
-                question: r.payload?.question || '',
-                answer: r.payload?.answer || '',
-                audio_path: r.payload?.audio_path,
-                group_name: r.payload?.group_name || '',
-                timestamp: r.payload?.timestamp
-            };
-        });
+                score: r.score,
+                feedback_score: r.relevance_score,
+                question: r.payload.question || '',
+                answer: r.payload.answer || '',
+                audio_path: r.payload.audio_path,
+                group_name: r.payload.group_name || '',
+                timestamp: r.payload.timestamp
+            }));
+
     } catch (error) {
-        console.error('Qdrant search error:', error);
+        console.error('Local search error:', error);
         return [];
     }
 }
@@ -88,8 +123,6 @@ async function searchQdrant(query, limit = 10) {
  */
 async function secureRAGSearch(query, options = {}) {
     const startTime = Date.now();
-
-    // Options par défaut
     const limit = options.limit || 5;
     const includeDetails = options.includeDetails !== false;
 
@@ -104,14 +137,14 @@ async function secureRAGSearch(query, options = {}) {
         };
     }
 
-    // 2. Recherche Qdrant
-    const rawResults = await searchQdrant(queryValidation.cleaned, limit * 2);
+    // 2. Recherche Locale
+    const rawResults = await searchLocal(queryValidation.cleaned, limit * 2);
 
     // 3. Application garde-fous
     const guardedResult = await applyGuardrails(query, rawResults);
 
     // 4. Construire réponse
-    const response = {
+    return {
         success: guardedResult.success,
         query: {
             original: query,
@@ -123,7 +156,7 @@ async function secureRAGSearch(query, options = {}) {
             question: r.question,
             answer: includeDetails ? r.answer : r.answer.substring(0, 200) + '...',
             confidence: r.confidence,
-            audio_url: r.audio_path ? `/audio/${require('path').basename(r.audio_path)}` : null
+            audio_url: r.audio_path ? `/audio/${path.basename(r.audio_path)}` : null
         })),
         stats: {
             duration: Date.now() - startTime,
@@ -132,100 +165,53 @@ async function secureRAGSearch(query, options = {}) {
             rejected: guardedResult.stats?.rejected || 0
         }
     };
-
-    // Ajouter warning si présent
-    if (guardedResult.warning) {
-        response.warning = guardedResult.warning;
-    }
-
-    // Ajouter message si pas de résultats
-    if (!guardedResult.success && guardedResult.message) {
-        response.message = guardedResult.message;
-    }
-
-    return response;
 }
 
-/**
- * Middleware Express pour l'API
- */
 function setupRAGEndpoints(app) {
     const express = require('express');
 
-    // POST /api/rag-search - Recherche sécurisée
+    // POST /api/rag-search
     app.post('/api/rag-search', express.json(), async (req, res) => {
-        const { query, limit } = req.body;
-
-        if (!query) {
-            return res.status(400).json({
-                success: false,
-                error: 'Le paramètre "query" est requis'
-            });
-        }
-
         try {
+            const { query, limit } = req.body;
+            if (!query) return res.status(400).json({ error: 'Query requis' });
+
             const result = await secureRAGSearch(query, { limit: limit || 5 });
             res.json(result);
         } catch (error) {
-            console.error('RAG Search error:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erreur serveur',
-                message: error.message
-            });
+            console.error(error);
+            res.status(500).json({ error: error.message });
         }
     });
 
-    // GET /api/rag-search?q=... - Version GET pour tests rapides
+    // GET /api/rag-search
     app.get('/api/rag-search', async (req, res) => {
-        const query = req.query.q || req.query.query;
-        const limit = parseInt(req.query.limit) || 5;
-
-        if (!query) {
-            return res.status(400).json({
-                success: false,
-                error: 'Le paramètre "q" est requis'
-            });
-        }
-
         try {
-            const result = await secureRAGSearch(query, { limit });
+            const query = req.query.q || req.query.query;
+            if (!query) return res.status(400).json({ error: 'Query requis' });
+
+            const result = await secureRAGSearch(query, { limit: parseInt(req.query.limit) || 5 });
             res.json(result);
         } catch (error) {
-            console.error('RAG Search error:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Erreur serveur'
-            });
+            res.status(500).json({ error: error.message });
         }
     });
 
-    // GET /api/rag-stats - Statistiques du système
-    app.get('/api/rag-stats', async (req, res) => {
-        try {
-            const qdrantInfo = await fetch(`${QDRANT_URL}/collections/${COLLECTION}`);
-            const info = await qdrantInfo.json();
-
-            res.json({
-                collection: COLLECTION,
-                points_count: info.result?.points_count || 0,
-                status: info.result?.status || 'unknown',
-                guardrails: {
-                    version: '1.0',
-                    features: ['query_filter', 'response_filter', 'confidence_scoring', 'rejection']
-                }
-            });
-        } catch (error) {
-            res.status(500).json({ error: 'Impossible de récupérer les stats' });
-        }
+    // GET /api/rag-stats
+    app.get('/api/rag-stats', (req, res) => {
+        const vectors = loadVectors();
+        res.json({
+            mode: 'local_sqlite',
+            points_count: vectors.length
+        });
     });
 
-    console.log('✅ RAG endpoints registered: /api/rag-search, /api/rag-stats');
+    console.log('✅ RAG endpoints registered (Mode: Local SQLite)');
 }
 
 module.exports = {
     secureRAGSearch,
-    searchQdrant,
+    searchLocal,
     getEmbedding,
     setupRAGEndpoints
 };

@@ -11,51 +11,26 @@ const COLLECTION = 'halakhic_qa';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/**
- * Obtenir embedding via OpenAI
- */
-async function getEmbedding(text) {
-    const response = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: text.substring(0, 8000)
-    });
-    return response.data[0].embedding;
-}
+const { searchLocal } = require('./rag_api');
 
 /**
- * Recherche vectorielle dans Qdrant
+ * Recherche vectorielle locale
  */
 async function searchSimilarQA(query, limit = 5) {
     try {
-        const queryVector = await getEmbedding(query);
+        const results = await searchLocal(query, limit);
 
-        const response = await fetch(`${QDRANT_URL}/collections/${COLLECTION}/points/search`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                vector: queryVector,
-                limit: limit,
-                with_payload: true
-            })
-        });
-
-        const data = await response.json();
-
-        if (!data.result) {
-            return [];
-        }
-
-        return data.result.map((r, index) => ({
+        return results.map((r, index) => ({
             index: index + 1,
             id: r.id,
             score: r.score,
-            question: r.payload?.question || '',
-            answer: r.payload?.answer || '',
-            audio_path: r.payload?.audio_path,
-            hasAudio: !!r.payload?.audio_path
+            question: r.question || '',
+            answer: r.answer || '',
+            audio_path: r.audio_path,
+            hasAudio: !!r.audio_path
         }));
     } catch (error) {
-        console.error('Qdrant search error:', error);
+        console.error('Local search error:', error);
         return [];
     }
 }
