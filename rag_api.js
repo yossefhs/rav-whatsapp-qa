@@ -209,9 +209,18 @@ function setupRAGEndpoints(app) {
     console.log('✅ RAG endpoints registered (Mode: Local SQLite)');
 }
 
+// ... (existing code)
+
+function invalidateCache() {
+    vectorsCache = null;
+    lastCacheUpdate = 0;
+    console.log('🔄 Cache vectoriel invalidé (Edit/Delete détecté)');
+}
+
 module.exports = {
     secureRAGSearch,
     searchLocal,
     getEmbedding,
-    setupRAGEndpoints
+    setupRAGEndpoints,
+    invalidateCache // Exported
 };

@@ -65,7 +65,11 @@ const Database = require('better-sqlite3');
 const { importWhatsAppZip } = require('./import_chat_zip');
 
 // Import RAG Search API
-const { setupRAGEndpoints } = require('./rag_api');
+// Import invalidateCache
+const { setupRAGEndpoints, invalidateCache } = require('./rag_api');
+
+// ...
+
 
 // Import AI Assistant
 const { setupAIAssistantEndpoints } = require('./ai_assistant');
@@ -287,6 +291,7 @@ app.delete('/api/messages/:id', (req, res) => {
         if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
 
         console.log(`🗑️ Message ${req.params.id} supprimé.`);
+        invalidateCache(); // FORCE REFRESH
         res.json({ success: true });
     } catch (e) {
         db.close();
@@ -309,6 +314,7 @@ app.put('/api/messages/:id', (req, res) => {
         if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
 
         console.log(`✏️ Message ${req.params.id} modifié.`);
+        invalidateCache(); // FORCE REFRESH
         res.json({ success: true });
     } catch (e) {
         db.close();
