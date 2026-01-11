@@ -24,23 +24,14 @@ if (fs.existsSync(ZIP_PATH)) {
         needRestore = true;
     } else {
         const dbStats = fs.statSync(DB_PATH);
-        // If zip is newer than DB (deployment update), restore
-        // Note: In persistent volume, DB might be newer than deployment zip. 
-        // Strategy: Only restore if DB is significantly smaller or missing? 
-        // Safer strategy for "Zero Config" Deployment: 
-        // If we just deployed a NEW zip, we probably want it. 
-        // BUT if user used the app, DB grew. 
-        // Let's assume for this "Fix", we want the zip content.
-        // To be safe: Restore if DB is missing.
-        // For updates: We might need a flag or manual action.
-        // Current User Request: Sync Local -> Railway. So we want to overwrite.
-        if (zipStats.mtime > dbStats.mtime) {
+        // FORCE RESTORE if DB is empty/small (< 1MB) which means it was auto-created but has no data
+        if (dbStats.size < 1024 * 1024) {
+            console.log('✨ DB is empty/small. Forcing restore from zip...');
+            needRestore = true;
+        } else if (zipStats.mtime > dbStats.mtime) {
             console.log('🔄 Zip is newer than DB. Restoring update...');
-            // needRestore = true; // CAREFUL: Docker mtime might be tricky.
-            // For now, let's stick to "Restore if missing" to be safe against data loss,
-            // UNLESS user explicitly wants to overwrite.
-            // User wants to SYNC. So force restore this time?
-            // Let's do: If DB < 1MB (empty) or missing.
+            // Optional: Enable this for overwrite updates
+            // needRestore = true; 
         }
     }
 
