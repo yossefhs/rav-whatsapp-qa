@@ -7,7 +7,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const Database = require('better-sqlite3');
 const halakhaAi = require('./halakha_ai');
 const OpenAI = require('openai');
-const { execSync } = require('child_process');
+const AdmZip = require('adm-zip');
 
 // AUTO-RESTORE DB (Fix for Railway)
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
@@ -16,9 +16,10 @@ const DB_ZIP = path.join(__dirname, 'ravqa.db.zip');
 if (!fs.existsSync(DB_PATH) && fs.existsSync(DB_ZIP)) {
   console.log('📦 Found ravqa.db.zip, checking if restore needed...');
   try {
-    console.log('🔄 Unzipping database...');
-    execSync(`unzip -o "${DB_ZIP}" -d "${__dirname}"`);
-    console.log('✅ Database restored from zip');
+    console.log('🔄 Unzipping database with AdmZip...');
+    const zip = new AdmZip(DB_ZIP);
+    zip.extractAllTo(__dirname, true);
+    console.log('✅ Database restored successfully');
   } catch (e) {
     console.error('❌ Failed to unzip database:', e);
   }
