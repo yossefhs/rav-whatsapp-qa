@@ -9,23 +9,9 @@ const halakhaAi = require('./halakha_ai');
 const OpenAI = require('openai');
 const AdmZip = require('adm-zip');
 
-// AUTO-RESTORE DB (Fix for Railway)
+// AUTO-RESTORE DB Logic moved to initBot() to prevent blocking require()
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
 const DB_ZIP = path.join(__dirname, 'ravqa.db.zip');
-
-if (!fs.existsSync(DB_PATH) && fs.existsSync(DB_ZIP)) {
-  console.log('📦 Found ravqa.db.zip, checking if restore needed...');
-  try {
-    console.log('🔄 Unzipping database with AdmZip...');
-    const zip = new AdmZip(DB_ZIP);
-    zip.extractAllTo(__dirname, true);
-    console.log('✅ Database restored successfully');
-  } catch (e) {
-    console.error('❌ Failed to unzip database:', e);
-  }
-} else {
-  console.log('⏩ Skipping DB restore (DB exists or no zip).');
-}
 
 let openai = null;
 if (process.env.OPENAI_API_KEY) {
@@ -263,6 +249,20 @@ client.on('message_create', async msg => {
 // Initialisation du Bot
 async function initBot() {
   console.log('🚀 Initializing WhatsApp Bot...');
+
+  // RESTORE DB IF NEEDED (Inside async function to not block)
+  if (!fs.existsSync(DB_PATH) && fs.existsSync(DB_ZIP)) {
+    console.log('📦 Found ravqa.db.zip, checking if restore needed...');
+    try {
+      console.log('🔄 Unzipping database with AdmZip...');
+      const zip = new AdmZip(DB_ZIP);
+      zip.extractAllTo(__dirname, true);
+      console.log('✅ Database restored successfully');
+    } catch (e) {
+      console.error('❌ Failed to unzip database:', e);
+    }
+  }
+
   try {
     await client.initialize();
     console.log('✅ Bot initialization started');
