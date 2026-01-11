@@ -11,8 +11,13 @@ const multer = require('multer');
 const AdmZip = require('adm-zip'); // For DB auto-restore
 
 // --- AUTO-RESTORE DB ---
-const DB_PATH = process.env.DB_PATH || './ravqa.db';
-const ZIP_PATH = './ravqa.db.zip';
+const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, 'ravqa.db');
+const ZIP_PATH = path.resolve(__dirname, 'ravqa.db.zip');
+
+console.log('📂 CWD:', process.cwd());
+console.log('📂 Dir listing:', fs.readdirSync(process.cwd()));
+console.log('📂 DB_PATH:', DB_PATH);
+console.log('📂 ZIP_PATH:', ZIP_PATH);
 
 if (fs.existsSync(ZIP_PATH)) {
     console.log('📦 Found ravqa.db.zip, checking if restore needed...');
