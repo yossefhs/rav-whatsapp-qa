@@ -1,3 +1,4 @@
+console.log('🏁 Starting RavQA Server process...');
 /**
  * RavQA Server - Version 2.0 Refonte
  * Architecture épurée et moderne
