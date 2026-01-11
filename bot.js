@@ -140,7 +140,20 @@ async function initBot() {
   console.log('🚀 Initializing WhatsApp Bot...');
 
   // RESTORE DB IF NEEDED
-  if (!fs.existsSync(DB_PATH) && fs.existsSync(DB_ZIP)) {
+  let shouldRestore = false;
+  if (fs.existsSync(DB_ZIP)) {
+    if (!fs.existsSync(DB_PATH)) {
+      shouldRestore = true;
+    } else {
+      const stats = fs.statSync(DB_PATH);
+      if (stats.size < 1024 * 1024) { // < 1MB
+        console.log(`⚠️ DB exists but is too small (${stats.size} bytes). Forcing restore...`);
+        shouldRestore = true;
+      }
+    }
+  }
+
+  if (shouldRestore) {
     console.log('📦 Found ravqa.db.zip, checking if restore needed...');
     try {
       console.log('🔄 Unzipping database with AdmZip...');

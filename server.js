@@ -87,7 +87,11 @@ app.use('/audio', express.static(path.join(__dirname, 'media')));
 // =============================================================================
 
 function getDB() {
-    return new Database(DB_PATH);
+    // Prevent creating empty DB if not yet restored
+    if (!fs.existsSync(DB_PATH)) {
+        throw new Error('Database not yet restored');
+    }
+    return new Database(DB_PATH, { fileMustExist: true });
 }
 
 // =============================================================================
