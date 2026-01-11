@@ -646,6 +646,78 @@
             color: #ef4444;
         }
 
+        /* Admin Buttons */
+        .admin-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .admin-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .admin-btn:hover {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+        }
+
+        .admin-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .admin-btn.edit:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        /* Edit Modal Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea.form-input {
+            min-height: 150px;
+            resize: vertical;
+        }
+
         .modal-body {
             padding: 24px;
         }
@@ -728,31 +800,32 @@
         }
 
         .share-btn.copy:hover {
-            background: rgba(99, 102, 241, 0.15);
-            border-color: var(--accent);
-            color: var(--accent);
+            background: rgba(59, 130, 246, 0.15);
+            border-color: #3b82f6;
+            color: #3b82f6;
         }
 
         .share-btn.email:hover {
-            background: rgba(245, 158, 11, 0.15);
-            border-color: var(--warning);
-            color: var(--warning);
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #ef4444;
         }
 
         /* Validation Section */
         .validation-section {
-            margin-top: 24px;
+            margin-top: 32px;
+            background: var(--bg-card);
             padding: 20px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border);
             border-radius: 12px;
+            border: 1px solid var(--border);
             text-align: center;
         }
 
         .validation-prompt {
             font-size: 14px;
-            color: var(--text-secondary);
+            font-weight: 600;
             margin-bottom: 16px;
+            color: var(--text-primary);
         }
 
         .validation-buttons {
@@ -762,199 +835,52 @@
         }
 
         .validate-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 24px;
-            border-radius: 10px;
-            border: 2px solid transparent;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .validate-btn.valid {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.3);
-            color: #10b981;
+        .validate-btn:hover {
+            transform: translateY(-2px);
         }
 
         .validate-btn.valid:hover {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-            transform: scale(1.05);
-        }
-
-        .validate-btn.invalid {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #ef4444;
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--success);
+            color: var(--success);
         }
 
         .validate-btn.invalid:hover {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.15);
             border-color: #ef4444;
-            transform: scale(1.05);
+            color: #ef4444;
         }
 
         .validation-done {
+            font-size: 14px;
             color: var(--success);
-            font-weight: 500;
-            padding: 12px;
-        }
-
-        /* AI Response Styles */
-        .ai-response {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            margin-top: 24px;
-        }
-
-        .ai-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .ai-icon {
-            font-size: 24px;
-        }
-
-        .ai-title {
-            font-size: 18px;
             font-weight: 600;
-            color: #a855f7;
-            flex: 1;
+            animation: fadeIn 0.5s ease;
         }
 
-        .ai-confidence {
-            background: rgba(168, 85, 247, 0.15);
-            color: #a855f7;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .ai-answer {
-            color: var(--text-secondary);
-            line-height: 1.8;
-            font-size: 15px;
-            margin-bottom: 16px;
-            white-space: pre-wrap;
-        }
-
-        .ai-answer .source-ref {
-            color: #a855f7;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .ai-disclaimer {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: var(--warning);
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        .ai-sources {
-            margin-top: 20px;
-        }
-
-        .sources-header {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-        }
-
-        .source-card {
-            display: flex;
-            gap: 12px;
-            padding: 12px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .source-card:hover {
-            border-color: #a855f7;
-            background: rgba(168, 85, 247, 0.05);
-        }
-
-        .source-num {
-            color: #a855f7;
-            font-weight: 700;
-            font-size: 14px;
-            min-width: 30px;
-        }
-
-        .source-content {
-            flex: 1;
-        }
-
-        .source-question {
-            color: var(--text-primary);
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .source-answer {
-            color: var(--text-muted);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .source-meta {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-        .similarity {
-            color: var(--success);
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .has-audio {
-            color: var(--accent);
-            font-size: 12px;
-        }
-
-        .ai-validation {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
             }
 
-            .main {
-                margin-left: 0;
-                padding: 24px 16px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
     </style>
@@ -962,116 +888,115 @@
 
 <body>
     <div class="app">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
-                <div class="logo-icon">🔍</div>
-                <span class="logo-text">RavQA<span class="logo-badge">AI</span></span>
+                <div class="logo-icon">✡️</div>
+                <div class="logo-text">RavQA<span class="logo-badge">PRO</span></div>
             </div>
 
             <nav class="nav">
-                <a href="#" class="nav-item active" data-view="search">
-                    <span class="nav-icon">🔍</span>
+                <a class="nav-item active" data-view="search">
+                    <div class="nav-icon">🔍</div>
                     <span>Recherche</span>
                 </a>
-                <a href="#" class="nav-item" data-view="messages">
-                    <span class="nav-icon">💬</span>
+                <a class="nav-item" data-view="messages">
+                    <div class="nav-icon">💬</div>
                     <span>Messages</span>
                 </a>
-                <a href="#" class="nav-item" data-view="audio">
-                    <span class="nav-icon">🎵</span>
+                <a class="nav-item" data-view="audio">
+                    <div class="nav-icon">🎧</div>
                     <span>Audio</span>
                 </a>
-                <a href="#" class="nav-item" data-view="upload">
-                    <span class="nav-icon">📤</span>
-                    <span>Upload ZIP</span>
+                <a class="nav-item" data-view="upload">
+                    <div class="nav-icon">📤</div>
+                    <span>Importer</span>
                 </a>
             </nav>
 
             <div class="stats-card">
-                <div class="stats-title">Statistiques</div>
+                <div class="stats-title">Base de connaissances</div>
                 <div class="stat-row">
                     <span>Messages</span>
-                    <span class="stat-value" id="stat-total">-</span>
+                    <span class="stat-value" id="totalMessages">-</span>
                 </div>
                 <div class="stat-row">
                     <span>Réponses</span>
-                    <span class="stat-value" id="stat-answered">-</span>
+                    <span class="stat-value" id="answeredMessages">-</span>
                 </div>
                 <div class="stat-row">
                     <span>Audio</span>
-                    <span class="stat-value" id="stat-audio">-</span>
+                    <span class="stat-value" id="audioMessages">-</span>
                 </div>
             </div>
 
-            <!-- Theme Toggle -->
             <div class="theme-toggle" id="themeToggle">
-                <span class="theme-icon" id="themeIcon">🌙</span>
-                <span id="themeLabel">Mode Nuit</span>
+                <span class="theme-icon" id="themeIcon">☀️</span>
+                <span id="themeLabel">Mode Jour</span>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main">
-            <div class="search-hero">
-                <h1>Assistant Halakhique IA</h1>
-                <p>Recherchez dans les enseignements du Rav Abichid</p>
+            <!-- VIEW: SEARCH -->
+            <div id="searchView" class="view active">
+                <div class="search-hero">
+                    <h1>Posez votre question au Rav</h1>
+                    <p>Recherchez parmi des milliers de questions halakhiques ou utilisez l'assistant IA</p>
 
-                <div class="search-container">
-                    <input type="text" class="search-box" id="searchInput"
-                        placeholder="Posez votre question halakhique..." autocomplete="off">
-                    <button class="search-btn" id="searchBtn">
-                        <span>✨</span>
-                        Rechercher
-                    </button>
+                    <div class="search-container">
+                        <input type="text" class="search-box" id="searchInput"
+                            placeholder="Ex: Peut-on manger du poisson avec du lait ?">
+                        <button class="search-btn" id="searchBtn">
+                            <span>Rechercher</span> 🔍
+                        </button>
+                    </div>
+                    <!-- Clear Button (Absolute within container logic handled via JS/CSS if needed, but here simple CSS) -->
+                    <div id="clearBtn"
+                        style="position:absolute; right:150px; top:50%; transform:translateY(-50%); cursor:pointer; display:none; color:var(--text-muted);">
+                        ✕</div>
+
+                    <div class="quick-actions">
+                        <button class="quick-btn">🥩 Cacherout</button>
+                        <button class="quick-btn">🕯️ Shabbat</button>
+                        <button class="quick-btn">🙏 Prière</button>
+                        <button class="quick-btn">👗 Nida</button>
+                        <button class="quick-btn">💍 Mariage</button>
+                    </div>
+
+                    <div class="search-mode-toggle">
+                        <div class="mode-btn active" data-mode="classic">
+                            <span>🔍</span> Classique
+                        </div>
+                        <div class="mode-btn" data-mode="rag">
+                            <span>🧠</span> Intelligence
+                        </div>
+                        <div class="mode-btn" data-mode="ai">
+                            <span>🤖</span> Assistant IA
+                        </div>
+                    </div>
                 </div>
 
-                <div class="quick-actions">
-                    <button class="quick-btn" data-query="lait viande bassar halavi">🥩🥛 Cacherout Lait/Viande</button>
-                    <button class="quick-btn" data-query="chabbat shabbat">🕯️ Chabbat</button>
-                    <button class="quick-btn" data-query="prière bénédiction berakha">🙏 Prières</button>
-                    <button class="quick-btn" data-query="nida mikvé pureté">💧 Nida</button>
-                    <button class="quick-btn" data-query="mariage kiddoushin">💍 Mariage</button>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
                 </div>
 
-                <!-- Search Mode Toggle -->
-                <div class="search-mode-toggle">
-                    <button class="mode-btn active" id="modeFTS" data-mode="fts"
-                        title="Recherche par mots-clés exacts dans toute la base">
-                        🔍 Recherche rapide
-                    </button>
-                    <button class="mode-btn" id="modeRAG" data-mode="rag"
-                        title="Comprend le sens de la question (Vector Search)">
-                        🧠 IA Sémantique
-                    </button>
-                    <button class="mode-btn" id="modeAI" data-mode="ai"
-                        title="Synthèse intelligente avec sources citées (GPT)">
-                        🤖 Assistant IA
-                    </button>
-                </div>
-                <div class="mode-description" id="modeDescription">
-                    Recherche simple par mots-clés exacts (ex: "micro-onde")
+                <div class="results" id="results">
+                    <!-- Results will be injected here -->
+                    <div class="empty-state">
+                        <div class="empty-icon">👋</div>
+                        <p>Posez une question pour commencer ou consultez les derniers messages.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-            </div>
-
-            <div class="results" id="results"></div>
-
-            <!-- Upload View -->
-            <div class="view" id="uploadView">
-                <h1
-                    style="font-size: 28px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                    Upload WhatsApp</h1>
-                <p style="color: var(--text-secondary); margin-bottom: 24px;">Importez un export ZIP de conversation
-                    WhatsApp</p>
+            <!-- VIEW: UPLOAD -->
+            <div id="uploadView" class="view" style="display:none;">
+                <h1 style="margin-bottom: 24px;">Importer des données</h1>
 
                 <div class="upload-zone" id="uploadZone">
-                    <div class="upload-icon">📦</div>
+                    <div class="upload-icon">📁</div>
                     <div class="upload-text">
-                        <strong>Glissez un fichier ZIP</strong> ou cliquez pour sélectionner
+                        Glissez un fichier <strong>.zip</strong> (Export WhatsApp)<br>
+                        ou cliquez pour sélectionner
                     </div>
                     <input type="file" id="fileInput" accept=".zip" style="display: none;">
 
@@ -1100,7 +1025,9 @@
             </div>
         </main>
 
-        <!-- Modal Vue Détaillée -->
+        <!-- MODALS -->
+
+        <!-- Details Modal -->
         <div class="modal-overlay" id="modalOverlay">
             <div class="modal">
                 <div class="modal-header">
@@ -1122,306 +1049,186 @@
                     </div>
                     <div class="modal-meta" id="modalMeta"></div>
 
-                    <!-- Share Buttons -->
+                    <!-- Share Section -->
                     <div class="share-section">
-                        <div class="modal-label">📤 Partager</div>
+                        <div class="modal-label">Partager</div>
                         <div class="share-buttons">
                             <button class="share-btn whatsapp" onclick="shareWhatsApp()">
-                                <span>💬</span> WhatsApp
+                                <span>📱</span> WhatsApp
                             </button>
                             <button class="share-btn copy" onclick="copyToClipboard()">
                                 <span>📋</span> Copier
                             </button>
                             <button class="share-btn email" onclick="shareEmail()">
-                                <span>✉️</span> Email
+                                <span>📧</span> Email
                             </button>
                         </div>
                     </div>
 
                     <!-- Validation Section -->
                     <div class="validation-section" id="validationSection">
-                        <div class="validation-prompt">
-                            🤖 Veuillez valider la réponse pour aider à entraîner le bot
-                        </div>
-                        <div class="validation-buttons" id="validationButtons">
-                            <button class="validate-btn valid" onclick="validateResponse(true)">
+                        <div class="validation-prompt">Cette réponse vous a-t-elle aidé ?</div>
+                        <div class="validation-buttons">
+                            <button class="validate-btn" onclick="validateResponse(true)">
                                 <span>👍</span> Réponse correcte
                             </button>
-                            <button class="validate-btn invalid" onclick="validateResponse(false)">
+                            <button class="validate-btn" onclick="validateResponse(false)">
                                 <span>👎</span> À améliorer
                             </button>
                         </div>
-                        <div class="validation-done" id="validationDone" style="display:none;">
-                            ✅ Merci pour votre contribution !
+                        <div class="validation-done" style="display: none;">Merci pour votre retour !</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal-overlay" id="editModalOverlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">✏️ Corriger Q&A</div>
+                    <div class="modal-close" id="editModalClose">×</div>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <div class="form-group">
+                        <label class="form-label">Question</label>
+                        <input type="text" class="form-input" id="editQuestion">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Réponse / Transcription</label>
+                        <textarea class="form-input" id="editAnswer"></textarea>
+                    </div>
+
+                    <!-- Relink Actions -->
+                    <div class="relink-actions" id="relinkActions"
+                        style="margin-bottom: 24px; padding: 16px; background: var(--bg-glass); border-radius: 8px; border: 1px solid var(--border);">
+                        <div class="modal-label">🔗 Gestion des liens</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="admin-btn" onclick="unlinkMessage()"
+                                style="color: #ef4444; border-color: #ef4444;">
+                                🚫 Délier (Dissocier)
+                            </button>
+                            <button class="admin-btn" onclick="openCandidatesModal()"
+                                style="color: #3b82f6; border-color: #3b82f6;">
+                                🔎 Chercher la question originale
+                            </button>
                         </div>
+                    </div>
+
+                    <div class="validation-buttons">
+                        <button class="validate-btn invalid" onclick="closeEditModal()">Annuler</button>
+                        <button class="validate-btn valid" onclick="saveEdit()">💾 Enregistrer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidates Modal -->
+        <div class="modal-overlay" id="candidatesModalOverlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">🔎 Sélectionner la question</div>
+                    <div class="modal-close" onclick="closeCandidatesModal()">×</div>
+                </div>
+                <div class="modal-body">
+                    <div
+                        style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+                        <input type="text" class="form-input" id="candidateSearchInput"
+                            placeholder="Rechercher (2 mots min)...">
+                        <button class="validate-btn" onclick="videoSearchCandidates()">🔍</button>
+                    </div>
+
+                    <p style="margin-bottom: 16px; color: var(--text-secondary);">
+                        Voici les messages trouvés dans les 48h précédant la réponse (ou résultats de recherche) :
+                    </p>
+                    <div id="candidatesList" style="max-height: 400px; overflow-y: auto;">
+                        <div class="empty-state">Chargement...</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPT -->
     <script>
-        // State
-        let currentView = 'search';
-        let currentAudio = null;
-        let searchMode = 'fts'; // 'fts' = Full Text Search, 'rag' = Semantic RAG
-
-        // Elements
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
+        // --- DATA & STATE ---
+        const searchInput = document.querySelector('.search-box');
         const resultsDiv = document.getElementById('results');
         const loadingDiv = document.getElementById('loading');
+        let currentSearchMode = 'classic';
+        const topicQuestions = {
+            cacherout: ["Combien de temps entre viande et lait ?", "Poisson et lait ?", "Cachériser un four ?", "Micro-onde mixte ?"],
+            shabbat: ["Porter une clé ?", "Ouvrir bouteille ?", "Utiliser éponge ?", "Mettre de la crème ?"],
+            prière: ["Oubli Yaale Veyavo", "Heure Chema", "Bénédiction tonnerre", "Kaddish parent"],
+            nida: ["Verification hefsek", "Tache vêtement", "Mikvé vendredi"],
+            mariage: ["Date interdite", "Bague halakha", "Témoins valides"]
+        };
 
-        // Load stats
+        // --- CORE FUNCTIONS ---
         async function loadStats() {
             try {
                 const res = await fetch('/api/stats');
-                const data = await res.json();
-                document.getElementById('stat-total').textContent = data.total?.toLocaleString() || '-';
-                document.getElementById('stat-answered').textContent = data.with_answer?.toLocaleString() || '-';
-                document.getElementById('stat-audio').textContent = data.with_audio?.toLocaleString() || '-';
-            } catch (e) {
-                console.error('Stats error:', e);
-            }
+                const stats = await res.json();
+                document.getElementById('totalMessages').textContent = stats.total || 0;
+                document.getElementById('answeredMessages').textContent = stats.with_answer || 0;
+                document.getElementById('audioMessages').textContent = stats.with_audio || 0;
+            } catch (e) { console.error(e); }
         }
 
-        // Search - supports FTS, RAG and AI modes
-        async function search(query) {
-            if (!query || query.length < 2) return;
-
+        async function loadRecentMessages(filter = 'all') {
             loadingDiv.classList.add('active');
             resultsDiv.innerHTML = '';
-
             try {
-                let data;
-
-                if (searchMode === 'ai') {
-                    // AI Assistant (GPT + Sources)
-                    const res = await fetch('/api/ask', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ question: query, limit: 5 })
-                    });
-                    const aiData = await res.json();
-                    renderAIResponse(aiData);
-                    return;
-                } else if (searchMode === 'rag') {
-                    // RAG Semantic Search (Qdrant + OpenAI)
-                    const res = await fetch(`/api/rag-search?q=${encodeURIComponent(query)}&limit=10`);
-                    const ragData = await res.json();
-
-                    // Transform RAG results to match FTS format
-                    data = {
-                        results: (ragData.results || []).map(r => ({
-                            id: r.id,
-                            question: r.question,
-                            answer: r.answer,
-                            hasAudio: !!r.audio_url,
-                            audioUrl: r.audio_url,
-                            confidence: r.confidence
-                        })),
-                        mode: 'rag',
-                        stats: ragData.stats
-                    };
-                } else {
-                    // FTS Search (SQLite)
-                    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`);
-                    data = await res.json();
-                    data.mode = 'fts';
-                }
-
-                renderResults(data.results, query, data.mode, data.stats);
+                const res = await fetch(`/api/messages?limit=50&filter=${filter}`);
+                const data = await res.json();
+                renderResults(data.messages || [], filter === 'audio' ? 'Messages Audio' : 'Derniers Messages');
             } catch (e) {
-                resultsDiv.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>Erreur de recherche</p></div>`;
+                resultsDiv.innerHTML = '<div class="empty-state">Erreur de chargement</div>';
             } finally {
                 loadingDiv.classList.remove('active');
             }
         }
 
-        // Render AI Assistant Response
-        function renderAIResponse(data) {
-            loadingDiv.classList.remove('active');
+        async function search(query) {
+            if (!query) return;
 
-            if (!data.success) {
-                resultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🤖</div>
-                        <p>${data.answer || 'Erreur de génération'}</p>
-                    </div>
-                `;
+            if (currentSearchMode === 'ai') {
+                startAIAssistant(query);
                 return;
             }
 
-            let html = `
-                <div class="ai-response">
-                    <div class="ai-header">
-                        <span class="ai-icon">🤖</span>
-                        <span class="ai-title">Réponse de l'Assistant IA</span>
-                        <span class="ai-confidence">${data.confidence}% confiance</span>
-                    </div>
-                    <div class="ai-answer">${escapeHtml(data.answer).replace(/\[(\d+)\]/g, '<sup class="source-ref">[$1]</sup>')}</div>
-                    <div class="ai-disclaimer">${data.disclaimer}</div>
-                    
-                    <div class="ai-sources">
-                        <div class="sources-header">📚 Sources utilisées (${data.sources.length})</div>
-                        ${data.sources.map(s => `
-                            <div class="source-card" onclick="openModal(${s.id})">
-                                <div class="source-num">[${s.index}]</div>
-                                <div class="source-content">
-                                    <div class="source-question">${escapeHtml(s.question)}</div>
-                                    <div class="source-answer">${escapeHtml(s.answer)}</div>
-                                    <div class="source-meta">
-                                        <span class="similarity">${s.similarity}% match</span>
-                                        ${s.hasAudio ? '<span class="has-audio">🎵 Audio</span>' : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="ai-validation">
-                        <span>Cette réponse est-elle utile ?</span>
-                        <button class="validate-btn valid" onclick="validateAIResponse(true)">👍 Oui</button>
-                        <button class="validate-btn invalid" onclick="validateAIResponse(false)">👎 Non</button>
-                    </div>
-                </div>
-            `;
+            loadingDiv.classList.add('active');
+            resultsDiv.innerHTML = '';
 
-            resultsDiv.innerHTML = html;
-        }
-
-        // Validate AI response
-        async function validateAIResponse(isValid) {
             try {
-                await fetch('/api/feedback', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'ai_response',
-                        isValid: isValid,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-            } catch (e) { }
+                let url = `/api/search?q=${encodeURIComponent(query)}`;
+                if (currentSearchMode === 'rag') url = `/api/rag-search?q=${encodeURIComponent(query)}`;
 
-            const validation = document.querySelector('.ai-validation');
-            validation.innerHTML = '<span style="color: var(--success);">✅ Merci pour votre retour !</span>';
-        }
-
-        // Search Mode Toggle
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                searchMode = btn.dataset.mode;
-
-                // Re-search if there's a query
-                const query = searchInput.value;
-                if (query.length >= 2) {
-                    search(query);
-                }
-
-                // Update description
-                const descEl = document.getElementById('modeDescription');
-                descEl.style.opacity = '0';
-
-                setTimeout(() => {
-                    let text = '';
-                    switch (searchMode) {
-                        case 'fts': text = 'Recherche simple par mots-clés exacts (ex: "micro-onde")'; break;
-                        case 'rag': text = 'Recherche intelligente par concept et sens (Vector Search)'; break;
-                        case 'ai': text = 'Assistant IA qui synthétise une réponse avec sources citées'; break;
-                    }
-                    descEl.textContent = text;
-                    descEl.style.opacity = '1';
-                }, 150);
-            });
-        });
-
-        // Render results
-        function renderResults(results, query, mode = 'fts', stats = null) {
-            if (!results || results.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <p>Aucun résultat pour "${query}"</p>
-                    </div>
-                `;
-                return;
+                const res = await fetch(url);
+                const data = await res.json();
+                renderResults(data.results || [], currentSearchMode === 'rag' ? 'Résultats Pertinents (Intelligence)' : 'Résultats de recherche');
+            } catch (e) {
+                resultsDiv.innerHTML = '<div class="empty-state">Erreur de recherche</div>';
+            } finally {
+                loadingDiv.classList.remove('active');
             }
-
-            const modeLabel = mode === 'rag' ? '🧠 IA Sémantique' : '🔍 Recherche rapide';
-            const modeClass = mode === 'rag' ? 'rag-mode' : 'fts-mode';
-
-            let html = `
-                <div class="results-header">
-                    <span class="results-title">Résultats</span>
-                    <span class="results-count">${results.length} réponse(s) • ${modeLabel}</span>
-                </div>
-            `;
-
-            if (mode === 'rag' && stats) {
-                html += `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">⚡ ${stats.duration}ms • ${stats.total_found} trouvés • ${stats.validated} validés</div>`;
-            }
-
-            results.forEach(r => {
-                const answer = r.answer ? (r.answer.length > 300 ? r.answer.substring(0, 300) + '...' : r.answer) : 'Cliquez pour voir la réponse →';
-                const date = r.date ? new Date(r.date).toLocaleDateString('fr-FR') : '';
-                const confidenceBadge = r.confidence ? `<span class="result-tag" style="background:rgba(16,185,129,0.15);color:#10b981;">✓ ${Math.round(r.confidence * 100)}%</span>` : '';
-
-                html += `
-                    <div class="result-card" onclick="openModal(${r.id})" style="cursor:pointer;">
-                        <div class="result-question">${escapeHtml(r.question) || 'Question'}</div>
-                        <div class="result-answer">${escapeHtml(answer)}</div>
-                        <div class="result-meta">
-                            ${date ? `<span>📅 ${date}</span>` : ''}
-                            ${r.hasAudio ? `<span class="result-tag">🎵 Audio</span>` : ''}
-                            ${confidenceBadge}
-                        </div>
-                    </div>
-                `;
-            });
-
-            resultsDiv.innerHTML = html;
         }
 
-        // Play audio
-        function playAudio(url) {
-            if (currentAudio) {
-                currentAudio.pause();
-            }
-            currentAudio = new Audio(url);
-            currentAudio.play();
-        }
-
-        // Escape HTML
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-        }
-
-        // Modal functions
+        // --- MODAL & DETAILS ---
         const modalOverlay = document.getElementById('modalOverlay');
         const modalClose = document.getElementById('modalClose');
+        let currentDetailId = null;
 
-        async function openModal(id) {
-            currentMessageId = id; // Store for validation
-
-            // Reset validation state
-            document.getElementById('validationButtons').style.display = 'flex';
-            document.getElementById('validationDone').style.display = 'none';
-
-            try {
-                const res = await fetch(`/api/messages/${id}`);
-                const data = await res.json();
-
-                document.getElementById('modalTitle').textContent = data.question || 'Réponse du Rav';
-                document.getElementById('modalQuestion').textContent = data.question || '-';
-                document.getElementById('modalAnswer').textContent = data.answer || data.rawAnswer || 'Pas de transcription disponible';
+        window.openDetailsModal = function (id) {
+            currentDetailId = id;
+            fetch(`/api/messages/${id}`).then(r => r.json()).then(data => {
+                document.getElementById('modalTitle').textContent = 'Question détaillée';
+                document.getElementById('modalQuestion').textContent = data.question;
+                document.getElementById('modalAnswer').textContent = data.answer;
 
                 const audioSection = document.getElementById('modalAudioSection');
                 const audioPlayer = document.getElementById('modalAudioPlayer');
-
                 if (data.hasAudio && data.audioUrl) {
                     audioSection.style.display = 'block';
                     audioPlayer.src = data.audioUrl;
@@ -1429,342 +1236,384 @@
                     audioSection.style.display = 'none';
                 }
 
-                const date = data.date ? new Date(data.date).toLocaleDateString('fr-FR', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                }) : '';
                 document.getElementById('modalMeta').innerHTML = `
-                    ${date ? `<span>📅 ${date}</span>` : ''}
-                    ${data.group ? `<span>📍 ${data.group}</span>` : ''}
+                    <span>📅 ${new Date(data.date).toLocaleString()}</span>
+                    <span>🆔 ${data.id}</span>
                 `;
 
+                // Reset Validation UI
+                document.querySelector('.validation-buttons').style.display = 'flex';
+                document.querySelector('.validation-done').style.display = 'none';
+
                 modalOverlay.classList.add('active');
-            } catch (e) {
-                console.error('Erreur chargement détails:', e);
-            }
-        }
+            });
+        };
 
-        function closeModal() {
+        modalClose.addEventListener('click', () => {
             modalOverlay.classList.remove('active');
-            const audioPlayer = document.getElementById('modalAudioPlayer');
-            if (audioPlayer) audioPlayer.pause();
-        }
+            const p = document.getElementById('modalAudioPlayer');
+            if (p) p.pause();
+        });
 
-        // Share functions
-        function getShareText() {
-            const question = document.getElementById('modalQuestion').textContent;
-            const answer = document.getElementById('modalAnswer').textContent;
-            return `❓ Question:\n${question}\n\n💬 Réponse du Rav:\n${answer}\n\n📚 Source: RavQA - Assistant Halakhique`;
-        }
-
+        // --- SHARE & VALIDATION ---
         function shareWhatsApp() {
-            const text = getShareText();
-            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
+            const q = document.getElementById('modalQuestion').textContent;
+            const a = document.getElementById('modalAnswer').textContent;
+            const text = `*Question:* ${q}\n\n*Réponse:* ${a}\n\n_RavQA - Assistant Halakhique_`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         }
 
         function copyToClipboard() {
-            const text = getShareText();
-            navigator.clipboard.writeText(text).then(() => {
-                const btn = document.querySelector('.share-btn.copy');
-                const original = btn.innerHTML;
-                btn.innerHTML = '<span>✅</span> Copié!';
-                btn.style.background = 'rgba(16, 185, 129, 0.2)';
-                btn.style.borderColor = '#10b981';
-                btn.style.color = '#10b981';
-                setTimeout(() => {
-                    btn.innerHTML = original;
-                    btn.style = '';
-                }, 2000);
-            });
+            const q = document.getElementById('modalQuestion').textContent;
+            const a = document.getElementById('modalAnswer').textContent;
+            const text = `Question: ${q}\n\nRéponse: ${a}`;
+            navigator.clipboard.writeText(text).then(() => alert('Copié dans le presse-papier !'));
         }
 
         function shareEmail() {
-            const question = document.getElementById('modalQuestion').textContent;
-            const answer = document.getElementById('modalAnswer').textContent;
-            const subject = encodeURIComponent('Question Halakhique - RavQA');
-            const body = encodeURIComponent(`Question:\n${question}\n\nRéponse du Rav:\n${answer}`);
-            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            const q = document.getElementById('modalQuestion').textContent;
+            const a = document.getElementById('modalAnswer').textContent;
+            const subject = 'Question Halakhique RavQA';
+            const body = `Question: ${q}\n\nRéponse: ${a}`;
+            window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
         }
 
-        // Validation function
-        let currentMessageId = null;
-
-        async function validateResponse(isValid) {
-            if (!currentMessageId) return;
-
+        async function validateResponse(isCorrect) {
+            if (!currentDetailId) return;
             try {
                 await fetch('/api/feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        messageId: currentMessageId,
-                        isValid: isValid,
-                        timestamp: new Date().toISOString()
-                    })
+                    body: JSON.stringify({ messageId: currentDetailId, isValid: isCorrect })
                 });
-            } catch (e) {
-                console.log('Feedback enregistré localement');
-            }
-
-            // Show thank you message
-            document.getElementById('validationButtons').style.display = 'none';
-            document.getElementById('validationDone').style.display = 'block';
+                document.querySelector('.validation-buttons').style.display = 'none';
+                document.querySelector('.validation-done').style.display = 'block';
+            } catch (e) { console.error(e); }
         }
 
-        modalClose.addEventListener('click', closeModal);
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) closeModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-        });
+        function renderResults(results, title) {
+            resultsDiv.innerHTML = `<div class="results-header"><div class="results-title">${title}</div><div class="results-count">${results.length} résultats</div></div>`;
+            if (results.length === 0) {
+                resultsDiv.innerHTML += '<div class="empty-state">Aucun résultat.</div>';
+                return;
+            }
+            results.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'result-card';
+                // Click on card opens details
+                div.onclick = (e) => {
+                    if (e.target.closest('.admin-btn') || e.target.closest('audio')) return;
+                    window.openDetailsModal(item.id);
+                };
 
-        // Events
-        searchBtn.addEventListener('click', () => search(searchInput.value));
-        searchInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter') search(searchInput.value);
-        });
-
-        document.querySelectorAll('.quick-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const query = btn.dataset.query;
-                searchInput.value = query;
-                search(query);
+                let audioHtml = item.hasAudio && item.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls src="${item.audioUrl}"></audio></div>` : '';
+                div.innerHTML = `
+                    <div class="result-question">${item.question || 'Question sans texte'}</div>
+                    <div class="result-answer">${(item.answer || '').substring(0, 300)}...</div>
+                    ${audioHtml}
+                    <div class="result-meta">
+                        <span>📅 ${new Date(item.date).toLocaleDateString()}</span>
+                        <div class="admin-controls">
+                            <button class="admin-btn edit" onclick="window.openEditModal('${item.id}')">✏️ Corriger</button>
+                            <button class="admin-btn delete" onclick="deleteMessage('${item.id}')">🗑️ Supprimer</button>
+                        </div>
+                    </div>
+                `;
+                resultsDiv.appendChild(div);
             });
-        });
+        }
 
-        // Navigation multi-vues
-        const views = {
-            search: document.querySelector('.search-hero'),
-            upload: document.getElementById('uploadView')
-        };
+        // --- EVENTS ---
+        document.getElementById('searchBtn').addEventListener('click', () => search(searchInput.value));
+        searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') search(searchInput.value); });
 
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const viewName = item.dataset.view;
-
-                // Update nav active
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 item.classList.add('active');
+                const v = item.dataset.view;
 
-                // Toggle views
-                if (viewName === 'search') {
-                    document.querySelector('.search-hero').style.display = 'block';
-                    document.getElementById('uploadView').style.display = 'none';
-                    document.getElementById('results').style.display = 'block';
-                    document.getElementById('loading').style.display = 'none';
-                } else if (viewName === 'upload') {
-                    document.querySelector('.search-hero').style.display = 'none';
-                    document.getElementById('uploadView').style.display = 'block';
-                    document.getElementById('results').style.display = 'none';
-                    document.getElementById('loading').style.display = 'none';
-                } else {
-                    // Messages et Audio font recherche filtrée
-                    document.querySelector('.search-hero').style.display = 'block';
-                    document.getElementById('uploadView').style.display = 'none';
-                    document.getElementById('results').style.display = 'block';
-                }
+                document.querySelector('.search-hero').style.display = (v === 'upload') ? 'none' : 'block';
+                document.getElementById('results').style.display = (v === 'upload') ? 'none' : 'block';
+                document.getElementById('uploadView').style.display = (v === 'upload') ? 'block' : 'none';
+
+                if (v === 'messages') loadRecentMessages('all');
+                if (v === 'audio') loadRecentMessages('audio');
             });
         });
 
-        // Upload functionality
-        const uploadZone = document.getElementById('uploadZone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadProgress = document.getElementById('uploadProgress');
-        const progressFill = document.getElementById('progressFill');
-        const uploadStatus = document.getElementById('uploadStatus');
-        const uploadResult = document.getElementById('uploadResult');
-
-        uploadZone.addEventListener('click', () => fileInput.click());
-
-        uploadZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadZone.classList.add('dragover');
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const txt = btn.textContent.toLowerCase();
+                let cat = 'shabbat';
+                Object.keys(topicQuestions).forEach(k => { if (txt.includes(k)) cat = k; });
+                const q = topicQuestions[cat][Math.floor(Math.random() * topicQuestions[cat].length)];
+                searchInput.value = q;
+                search(q);
+            });
         });
 
-        uploadZone.addEventListener('dragleave', () => {
-            uploadZone.classList.remove('dragover');
-        });
+        // --- ADMIN & RELINK ---
+        const editModalOverlay = document.getElementById('editModalOverlay');
+        const editIdInput = document.getElementById('editId');
+        const editQuestionInputs = document.getElementById('editQuestion');
+        const editAnswerInputs = document.getElementById('editAnswer');
+        const candidatesModalOverlay = document.getElementById('candidatesModalOverlay');
+        const candidatesList = document.getElementById('candidatesList');
 
-        uploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.zip')) {
-                uploadFile(file);
-            } else {
-                showUploadError('Seuls les fichiers .zip sont acceptés');
+        window.openEditModal = function (id) {
+            fetch(`/api/messages/${id}`).then(r => r.json()).then(data => {
+                editIdInput.value = data.id;
+                editQuestionInputs.value = data.question;
+                editAnswerInputs.value = data.answer;
+                editModalOverlay.classList.add('active');
+            });
+        };
+
+        function closeEditModal() { editModalOverlay.classList.remove('active'); }
+        document.getElementById('editModalClose').addEventListener('click', closeEditModal);
+
+        async function saveEdit() {
+            try {
+                await fetch(`/api/messages/${editIdInput.value}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: editQuestionInputs.value, answer: editAnswerInputs.value })
+                });
+                closeEditModal();
+                alert('Sauvegardé');
+                loadRecentMessages();
+            } catch (e) { alert('Erreur'); }
+        }
+
+        async function deleteMessage(id) {
+            if (!confirm('Supprimer ?')) return;
+            await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+            loadRecentMessages();
+        }
+
+        async function unlinkMessage() {
+            if (!confirm('Délier ?')) return;
+            await fetch('/api/unlink', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: editIdInput.value })
+            });
+            closeEditModal();
+            loadRecentMessages();
+        }
+
+        function openCandidatesModal() {
+            candidatesModalOverlay.classList.add('active');
+            candidatesList.innerHTML = 'Chargement...';
+            fetch(`/api/candidates/${editIdInput.value}`).then(r => r.json()).then(data => {
+                candidatesList.innerHTML = (data.candidates || []).map(c => `
+                    <div class="result-card" onclick="relinkMessage('${c.id}')" style="cursor:pointer; margin-bottom:10px;">
+                        <div class="result-question">${c.question_text || '??'}</div>
+                        <div class="result-meta">📅 ${new Date(c.ts * 1000).toLocaleString()} - ${c.sender_name}</div>
+                    </div>
+                `).join('') || 'Aucun candidat';
+            });
+        }
+
+        function closeCandidatesModal() { candidatesModalOverlay.classList.remove('active'); }
+
+        async function videoSearchCandidates() {
+            const q = document.getElementById('candidateSearchInput').value;
+            if (!q || q.split(' ').length < 2) {
+                alert('Veuillez entrer au moins 2 mots clés.');
+                return;
             }
-        });
 
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files[0]) {
-                uploadFile(fileInput.files[0]);
-            }
-        });
-
-        async function uploadFile(file) {
-            uploadZone.classList.add('uploading');
-            uploadProgress.classList.add('active');
-            uploadResult.className = 'upload-result';
-            progressFill.style.width = '20%';
-            uploadStatus.textContent = `Upload de ${file.name}...`;
-
-            const formData = new FormData();
-            formData.append('file', file);
+            candidatesList.innerHTML = '<div class="empty-state"><div class="spinner"></div> Recherche...</div>';
 
             try {
-                // 1. Démarrer l'upload (avec XHR pour progress bar)
-                const data = await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/api/upload');
+                const res = await fetch(`/api/candidates/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
 
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            const percent = (e.loaded / e.total) * 100;
-                            progressFill.style.width = Math.min(95, percent) + '%';
-                            uploadStatus.textContent = `Upload en cours : ${Math.round(percent)}% (${(e.loaded / 1024 / 1024).toFixed(1)}MB)`;
-                        }
-                    };
-
-                    xhr.onload = () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            resolve(JSON.parse(xhr.responseText));
-                        } else {
-                            reject(new Error(`Upload failed: ${xhr.statusText}`));
-                        }
-                    };
-
-                    xhr.onerror = () => reject(new Error('Network error during upload'));
-                    xhr.send(formData);
-                });
-
-                if (!data.success || !data.jobId) {
-                    throw new Error(data.error || 'Erreur lors de l\'upload');
+                if (data.error) {
+                    candidatesList.innerHTML = `<div class="empty-state">❌ ${data.error}</div>`;
+                    return;
                 }
 
-                // 2. Mode Polling (Background Job)
-                uploadStatus.textContent = 'Traitement en cours (Transcription IA & Analyse)...';
-                progressFill.style.width = '40%';
+                if (!data.candidates || data.candidates.length === 0) {
+                    candidatesList.innerHTML = '<div class="empty-state">Aucun candidat trouvé pour cette recherche.</div>';
+                    return;
+                }
 
-                // Polling toutes les 1.5s
-                const startTime = Date.now();
-                const pollInterval = setInterval(async () => {
-                    try {
-                        const statusRes = await fetch(`/api/upload/status/${data.jobId}`);
-                        const job = await statusRes.json();
+                candidatesList.innerHTML = data.candidates.map(c => `
+                    <div class="result-card" onclick="relinkMessage('${c.id}')" style="cursor:pointer; border:1px solid var(--border); margin-bottom:10px;">
+                        <div class="result-question">${c.question_text || 'Text manquant'}</div>
+                        <div class="result-meta">
+                            <span>📅 ${new Date(c.ts * 1000).toLocaleString()}</span>
+                            <span>👤 ${c.sender_name || 'Inconnu'}</span>
+                            <span>📍 ${c.group_name}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                candidatesList.innerHTML = '<div class="empty-state">Erreur recherche</div>';
+            }
+        }
 
-                        if (job.status === 'completed') {
-                            clearInterval(pollInterval);
-                            progressFill.style.width = '100%';
-                            uploadStatus.textContent = 'Import terminé !';
-                            uploadResult.className = 'upload-result success';
+        async function relinkMessage(qid) {
+            if (!confirm('Relier ?')) return;
+            await fetch('/api/relink', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioId: editIdInput.value, questionId: qid })
+            });
+            closeCandidatesModal();
+            closeEditModal();
+            loadRecentMessages();
+        }
 
-                            const r = job.result;
-                            uploadResult.innerHTML = `
-                                <strong>✅ Import terminé avec succès</strong><br>
-                                📄 Fichier: ${job.file}<br>
-                                📝 Messages: ${r.imported || 0}<br>
-                                🎵 Audios liés: ${r.audio_linked || 0}<br>
-                                🎙️ Transcriptions: ${r.transcribed || 0}<br>
-                                🛡️ Doublons: ${r.skipped_dup || 0}
-                            `;
-                            loadStats(); // Rafraîchir stats globales
+        // --- UPLOAD ---
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
 
-                            // Cleanup UI
-                            setTimeout(() => {
-                                uploadZone.classList.remove('uploading');
-                                uploadProgress.classList.remove('active');
-                            }, 5000);
+        if (uploadZone) {
+            uploadZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]); });
+            uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+            });
+        }
 
-                        } else if (job.status === 'error') {
-                            clearInterval(pollInterval);
-                            throw new Error(job.error || 'Erreur inconnue pendant le traitement');
-                        } else {
-                            // En cours... calcul ETA
-                            const p = job.progress;
-                            let statusText = 'Traitement en cours...';
-                            let percent = 40;
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            document.getElementById('uploadProgress').classList.add('active');
 
-                            if (p) {
-                                if (p.state === 'extracting') { statusText = 'Extraction ZIP...'; percent = 45; }
-                                else if (p.state === 'scanning') { statusText = 'Analyse audios...'; percent = 50; }
-                                else if (p.state === 'parsing') { statusText = 'Lecture converstion...'; percent = 55; }
-                                else if (p.state === 'processing' || p.state === 'transcribing') {
-                                    // Calcul % réel basé sur lignes traitées
-                                    if (p.total > 0) {
-                                        const processingPercent = (p.processed / p.total) * 100;
-                                        // Mappe 0-100% processing vers 60-98% global
-                                        percent = 60 + (processingPercent * 0.38);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload');
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) document.getElementById('progressFill').style.width = ((e.loaded / e.total) * 100) + '%';
+            };
+            xhr.onload = () => {
+                const res = JSON.parse(xhr.responseText);
+                if (res.jobId) pollUpload(res.jobId);
+                else alert('Erreur upload');
+            };
+            xhr.send(formData);
+        }
 
-                                        // Calcul ETA simple (Vitesse moyenne)
-                                        const elapsed = (Date.now() - startTime) / 1000; // secondes
-                                        if (p.processed > 50) { // Attendre un peu pour stabiliser
-                                            const rate = p.processed / elapsed; // msg/sec
-                                            const remaining = p.total - p.processed;
-                                            const etaSec = remaining / rate;
+        function pollUpload(jobId) {
+            const int = setInterval(async () => {
+                const res = await fetch(`/api/upload/status/${jobId}`);
+                const job = await res.json();
+                document.getElementById('uploadStatus').textContent = job.progress?.message || job.status;
+                if (job.status === 'completed' || job.status === 'error') {
+                    clearInterval(int);
+                    if (job.status === 'completed') { loadStats(); alert('Import terminé'); }
+                }
+            }, 1500);
+        }
 
-                                            // Formatage temps
-                                            let timeStr = '';
-                                            if (etaSec > 60) timeStr = `~${Math.ceil(etaSec / 60)} min`;
-                                            else timeStr = `~${Math.ceil(etaSec)} sec`;
+        // --- THEME ---
+        const themeToggle = document.getElementById('themeToggle');
+        function setTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            document.getElementById('themeIcon').textContent = t === 'light' ? '☀️' : '🌙';
+            document.getElementById('themeLabel').textContent = t === 'light' ? 'Mode Jour' : 'Mode Nuit';
+        }
+        themeToggle.addEventListener('click', () => setTheme(localStorage.getItem('theme') === 'light' ? 'dark' : 'light'));
+        setTheme(localStorage.getItem('theme') || 'dark');
 
-                                            statusText = `${p.message} (ETA: ${timeStr})`;
-                                        } else {
-                                            statusText = p.message;
-                                        }
-                                    }
-                                }
-                            }
+        // --- AI ASSISTANT ---
+        async function startAIAssistant(question) {
+            loadingDiv.classList.add('active');
+            resultsDiv.innerHTML = `
+                <div class="ai-loading">
+                    <div class="spinner"></div>
+                    <p>L'assistant réfléchit et consulte les sources...</p>
+                </div>
+            `;
 
-                            progressFill.style.width = Math.min(98, percent) + '%';
-                            uploadStatus.textContent = statusText;
-                        }
-                    } catch (err) {
-                        console.error('Polling error', err);
-                    }
-                }, 1500);
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    resultsDiv.innerHTML = `<div class="empty-state">❌ ${data.error || 'Erreur IA'}</div>`;
+                    return;
+                }
+
+                // Render AI Answer
+                let html = `
+                    <div class="ai-result">
+                        <div class="ai-header">
+                            <span class="ai-badge">🤖 Réponse IA</span>
+                            <span class="ai-conf">Confiance: ${data.confidence}%</span>
+                        </div>
+                        <div class="ai-body">${data.answer.replace(/\n/g, '<br>')}</div>
+                        <div class="ai-disclaimer">${data.disclaimer}</div>
+                    </div>
+                    <div class="results-header" style="margin-top:30px;">
+                        <div class="results-title">📚 Sources utilisées</div>
+                    </div>
+                `;
+
+                // Render Sources
+                data.sources.forEach(s => {
+                    const audioHtml = s.audioUrl ? `<div style="margin-top:5px;"><audio controls src="${s.audioUrl}"></audio></div>` : '';
+                    html += `
+                        <div class="result-card" onclick="window.openDetailsModal('${s.id}')">
+                            <div class="result-question"><span class="source-badge">Source [${s.index}]</span> ${s.question}</div>
+                            <div class="result-answer">${s.answer}</div>
+                            ${audioHtml}
+                        </div>
+                    `;
+                });
+
+                resultsDiv.innerHTML = html;
 
             } catch (e) {
-                showUploadError(e.message);
+                resultsDiv.innerHTML = '<div class="empty-state">Erreur de l\'assistant</div>';
+            } finally {
+                loadingDiv.classList.remove('active');
             }
         }
 
-        function showUploadError(message) {
-            uploadResult.className = 'upload-result error';
-            uploadResult.innerHTML = `<strong>❌ Erreur</strong><br>${message}`;
-        }
+        // --- EVENTS & MODES ---
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update UI
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
 
-        // Theme Toggle
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const themeLabel = document.getElementById('themeLabel');
+                // Update State
+                currentSearchMode = btn.dataset.mode;
 
-        function setTheme(theme) {
-            if (theme === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-                themeIcon.textContent = '☀️';
-                themeLabel.textContent = 'Mode Jour';
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-                themeIcon.textContent = '🌙';
-                themeLabel.textContent = 'Mode Nuit';
-            }
-            localStorage.setItem('theme', theme);
-        }
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        setTheme(savedTheme);
-
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            setTheme(currentTheme === 'light' ? 'dark' : 'light');
+                // Update Placeholder
+                const input = document.getElementById('searchInput');
+                if (currentSearchMode === 'ai') input.placeholder = "Posez une question à l'IA (ex: Peut-on...)";
+                else if (currentSearchMode === 'rag') input.placeholder = "Recherche intelligente (Concepts...)";
+                else input.placeholder = "Recherche classique...";
+            });
         });
 
-        // Init
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            search(document.getElementById('searchInput').value);
+        });
+
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search(e.target.value);
+        });
+
+        // --- INIT ---
         loadStats();
+        loadRecentMessages();
+
     </script>
 </body>
 

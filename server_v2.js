@@ -322,6 +322,140 @@ app.put('/api/messages/:id', (req, res) => {
     }
 });
 
+// ADMIN: Relier manuellement une réponse (audio) à une question
+app.post('/api/relink', (req, res) => {
+    const { audioId, questionId } = req.body;
+
+    // audioId = ID du message contenant l'audio/réponse
+    // questionId = ID du message contenant la question
+
+    if (!audioId || !questionId) return res.status(400).json({ error: 'IDs manquants' });
+
+    const db = getDB();
+    try {
+        // Obtenir le message question pour avoir son wa_message_id si nécessaire, 
+        // ou simplement lier par ID interne.
+        // La colonne s'appelle link_question_id. Assumons qu'elle stocke l'ID interne pour simplifier,
+        // ou le wa_message_id selon le legacy. Le legacy utilisait wa_message_id.
+        // Vérifions le schéma : link_question_id est TEXT. 
+        // L'ancien système liait un message AUDIO à une QUESTION via link_question_id = ID de la question.
+
+        const qMsg = db.prepare('SELECT wa_message_id FROM messages WHERE id = ?').get(questionId);
+        if (!qMsg) return res.status(404).json({ error: 'Question introuvable' });
+
+        // Update le message audio
+        const info = db.prepare(`
+            UPDATE messages 
+            SET link_question_id = ?, link_confidence = 1.0, link_method = 'manual'
+            WHERE id = ?
+        `).run(qMsg.wa_message_id, audioId);
+
+        // Copier le texte de la question dans le message audio pour affichage facile
+        const qText = db.prepare('SELECT question_text FROM messages WHERE id = ?').get(questionId).question_text;
+        db.prepare('UPDATE messages SET question_text = ? WHERE id = ?').run(qText, audioId);
+
+        db.close();
+        console.log(`🔗 Relink: Audio ${audioId} -> Question ${questionId}`);
+        invalidateCache();
+        res.json({ success: true });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ADMIN: Délier un message
+app.post('/api/unlink', (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID manquant' });
+
+    const db = getDB();
+    try {
+        const info = db.prepare(`
+            UPDATE messages 
+            SET link_question_id = NULL, link_confidence = 0, question_text = NULL
+            WHERE id = ?
+        `).run(id);
+
+        db.close();
+        console.log(`⛓️ Unlink: Message ${id}`);
+        invalidateCache();
+        res.json({ success: true });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ADMIN: Chercher candidats par mots-clés (Global Search)
+app.get('/api/candidates/search', (req, res) => {
+    const q = req.query.q || '';
+    const keywords = q.split(/\s+/).filter(k => k.length > 1);
+
+    if (keywords.length < 2) {
+        return res.status(400).json({ error: 'Entrez au moins 2 mots clés.' });
+    }
+
+    const db = getDB();
+    try {
+        // Build dynamic query
+        const conditions = keywords.map(() => 'question_text LIKE ?').join(' AND ');
+        const params = keywords.map(k => `%${k}%`);
+
+        const sql = `
+            SELECT id, question_text, ts, group_name, sender_name 
+            FROM messages 
+            WHERE ${conditions}
+            AND (audio_path IS NULL OR audio_path = '')
+            AND length(question_text) > 5
+            AND deleted_at IS NULL
+            ORDER BY ts DESC
+            LIMIT 50
+        `;
+
+        const candidates = db.prepare(sql).all(...params);
+        db.close();
+        res.json({ candidates });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ADMIN: Trouver des candidats pour relier
+app.get('/api/candidates/:id', (req, res) => {
+    // On cherche des messages TEXTE (queston) autour de la date du message AUDIO (id)
+    const db = getDB();
+    try {
+        const target = db.prepare('SELECT ts, group_name FROM messages WHERE id = ?').get(req.params.id);
+        if (!target) return res.status(404).json({ error: 'Message non trouvé' });
+
+        // Chercher 48h avant
+        const window = 48 * 3600;
+        const minTs = target.ts - window;
+        const maxTs = target.ts; // La question est généralement AVANT la réponse
+
+        const candidates = db.prepare(`
+            SELECT id, question_text, ts, group_name, sender_name 
+            FROM messages 
+            WHERE ts BETWEEN ? AND ?
+            AND (audio_path IS NULL OR audio_path = '')
+            AND length(question_text) > 5
+            AND deleted_at IS NULL
+            ORDER BY ts DESC
+            LIMIT 50
+        `).all(minTs, maxTs);
+
+        db.close();
+        res.json({ candidates });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+
 // =============================================================================
 // API ENDPOINTS - Upload WhatsApp ZIP
 // =============================================================================
@@ -417,7 +551,7 @@ app.post('/api/feedback', express.json(), (req, res) => {
     try {
         const db = new Database(DB_PATH);
 
-        // Créer la table si elle n'existe pas
+        // 1. Enregistrer le feedback historique
         db.exec(`
             CREATE TABLE IF NOT EXISTS feedback (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -428,11 +562,26 @@ app.post('/api/feedback', express.json(), (req, res) => {
             )
         `);
 
-        // Insérer le feedback
         db.prepare(`
             INSERT INTO feedback (message_id, is_valid, created_at)
             VALUES (?, ?, ?)
         `).run(messageId, isValid ? 1 : 0, timestamp || new Date().toISOString());
+
+        // 2. APPRENTISSAGE: Mise à jour du score de pertinence du message
+        // Si le feedback est positif, on augmente le score (max 1.0)
+        // Si le feedback est négatif, on diminue (min 0.1) - optionnel, ici on ne fait que monter pour la "validation"
+        if (isValid) {
+            db.prepare(`
+                UPDATE messages 
+                SET relevance_score = MIN(COALESCE(relevance_score, 0.5) + 0.1, 1.0) 
+                WHERE id = ?
+            `).run(messageId);
+
+            console.log(`🧠 Apprentissage: Message ${messageId} score augmenté !`);
+
+            // Invalider le cache pour que la recherche prenne en compte le nouveau score
+            invalidateCache();
+        }
 
         db.close();
 

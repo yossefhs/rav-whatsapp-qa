@@ -85,17 +85,37 @@ async function getEmbedding(text) {
     return response.data[0].embedding;
 }
 
-// Recherche Locale
+// Recherche Locale (Hybride & Apprentissage)
 async function searchLocal(query, limit = 10) {
     try {
         const queryVector = await getEmbedding(query);
         const vectors = loadVectors();
 
+        // Mots-clés pour recherche hybride simple
+        const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
         // Calcul score pour tous
-        const results = vectors.map(v => ({
-            ...v,
-            score: cosineSimilarity(queryVector, v.vector)
-        }));
+        const results = vectors.map(v => {
+            const cosSim = cosineSimilarity(queryVector, v.vector);
+
+            // 1. Boost Apprentissage (Relevance Score)
+            // Base score 0.5 -> multiplicateur 1.0
+            // Score 1.0 (très validé) -> multiplicateur 1.2 (+20%)
+            const relevanceBoost = 1.0 + ((v.relevance_score || 0.5) - 0.5) * 0.4;
+
+            // 2. Boost Hybride (Mots-clés exacts)
+            // Si la question contient un mot clé rare, petit boost
+            let keywordBonus = 0;
+            const qLower = (v.payload.question || '').toLowerCase();
+            keywords.forEach(k => {
+                if (qLower.includes(k)) keywordBonus += 0.05;
+            });
+
+            return {
+                ...v,
+                score: (cosSim * relevanceBoost) + keywordBonus
+            };
+        });
 
         // Trier et limiter
         return results
