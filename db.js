@@ -3,11 +3,6 @@ const path = require('path');
 require('dotenv').config();
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-require('dotenv').config();
-
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
 let db = null;
 
 function getDb() {

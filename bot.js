@@ -27,7 +27,6 @@ const { processMessage } = require('./message_processor');
 const MEDIA_DIR = path.join(__dirname, 'media');
 if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
 const GROUPS = [process.env.GROUP_1, process.env.GROUP_2].filter(Boolean);
 
 // Client WhatsApp (Lazy Loading)

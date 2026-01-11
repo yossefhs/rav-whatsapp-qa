@@ -13,6 +13,7 @@ const AdmZip = require('adm-zip'); // For DB auto-restore
 
 // --- AUTO-RESTORE DB ---
 // Moved to bot.js (initBot) to prevent startup blocking
+const DB_PATH = process.env.DB_PATH || './ravqa.db';
 // -----------------------
 // -----------------------
 
