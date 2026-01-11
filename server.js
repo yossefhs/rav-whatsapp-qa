@@ -593,6 +593,11 @@ app.listen(PORT, () => {
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`📂 Database: ${DB_PATH}`);
     console.log(`🧠 RAG Search: http://localhost:${PORT}/api/rag-search\n`);
+
+    // Trigger Async Restore immediately (Decoupled from Bot)
+    require('./restore_db')().then(() => {
+        console.log('✅ Async DB Restore signaled completion/check');
+    }).catch(e => console.error('❌ Restore DB Error:', e));
 });
 
 module.exports = app;
