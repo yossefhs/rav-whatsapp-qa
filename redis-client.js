@@ -7,12 +7,13 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://default:nS9ovE7uWCYi7sh78Chd
 
 const redisClient = new Redis(REDIS_URL, {
   retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+    // Stop retrying after 5 attempts if we can't connect, to avoid log spam/crash loops
+    if (times > 5) return null;
+    return Math.min(times * 50, 2000);
   },
   maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  enableOfflineQueue: true
+  enableReadyCheck: false, // Don't check for ready state to allow offline mode if needed
+  enableOfflineQueue: false // Fail fast if offline
 });
 
 // Événements de connexion
@@ -37,9 +38,21 @@ redisClient.on('reconnecting', () => {
 });
 
 // Fonctions utilitaires pour le cache
+// Fallback mémoire si Redis indisponible
+const memoryCache = new Map();
+
 const redisCache = {
   // Définir une valeur avec expiration (TTL en secondes)
   async set(key, value, ttl = 3600) {
+    // Mode hors ligne / Fallback
+    if (redisClient.status !== 'ready') {
+      console.log(`⚠️ Redis non connecté. Fallback mémoire (SET ${key})`);
+      memoryCache.set(key, value);
+      // Nettoyage manuel simple (timeout) pour simuler TTL
+      if (ttl) setTimeout(() => memoryCache.delete(key), ttl * 1000);
+      return true;
+    }
+
     try {
       const stringValue = JSON.stringify(value);
       if (ttl) {
@@ -56,6 +69,11 @@ const redisCache = {
 
   // Récupérer une valeur
   async get(key) {
+    if (redisClient.status !== 'ready') {
+      console.log(`⚠️ Redis non connecté. Fallback mémoire (GET ${key})`);
+      return memoryCache.get(key) || null;
+    }
+
     try {
       const value = await redisClient.get(key);
       return value ? JSON.parse(value) : null;
@@ -67,6 +85,11 @@ const redisCache = {
 
   // Supprimer une clé
   async del(key) {
+    if (redisClient.status !== 'ready') {
+      memoryCache.delete(key);
+      return true;
+    }
+
     try {
       await redisClient.del(key);
       return true;
@@ -78,6 +101,9 @@ const redisCache = {
 
   // Vérifier si une clé existe
   async exists(key) {
+    if (redisClient.status !== 'ready') {
+      return memoryCache.has(key);
+    }
     try {
       const result = await redisClient.exists(key);
       return result === 1;
@@ -89,6 +115,7 @@ const redisCache = {
 
   // Définir le TTL d'une clé existante
   async expire(key, ttl) {
+    if (redisClient.status !== 'ready') return true; // Ignoré en mémoire
     try {
       await redisClient.expire(key, ttl);
       return true;
@@ -100,6 +127,7 @@ const redisCache = {
 
   // Récupérer toutes les clés correspondant à un pattern
   async keys(pattern) {
+    if (redisClient.status !== 'ready') return []; // Pas de support wildcards mémoire simple
     try {
       return await redisClient.keys(pattern);
     } catch (error) {
@@ -110,6 +138,10 @@ const redisCache = {
 
   // Vider toutes les clés (attention!)
   async flushAll() {
+    if (redisClient.status !== 'ready') {
+      memoryCache.clear();
+      return true;
+    }
     try {
       await redisClient.flushall();
       return true;

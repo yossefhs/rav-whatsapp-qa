@@ -11,6 +11,7 @@ module.exports = {
                 NODE_ENV: 'production'
             }
         },
+        /*
         {
             name: 'rav-bot',
             script: './bot.js',
@@ -23,5 +24,6 @@ module.exports = {
                 NODE_ENV: 'production'
             }
         }
+        */
     ]
 };
