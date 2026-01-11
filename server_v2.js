@@ -629,7 +629,7 @@ app.use((req, res) => {
 // START SERVER
 // =============================================================================
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
     console.log(`\n🚀 RavQA Server v2.0`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`📂 Database: ${DB_PATH}`);

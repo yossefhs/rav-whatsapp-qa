@@ -38,4 +38,4 @@ RUN mkdir -p uploads media .ravbot/chrome-profile
 EXPOSE 3000
 
 # Commande de démarrage via PM2
-CMD ["node", "server_v2.js"]
+CMD ["pm2-runtime", "start", "pm2.config.js"]
