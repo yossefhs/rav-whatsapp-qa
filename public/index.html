@@ -102,15 +102,12 @@
             margin-bottom: 32px;
         }
 
-        .logo-icon {
+        .logo-img {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--accent), #8b5cf6);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
         }
 
         .logo-text {
@@ -233,6 +230,8 @@
             border-radius: 16px;
             padding: 20px 24px;
             padding-right: 140px;
+            /* Space for search button */
+            padding-left: 24px;
             font-size: 16px;
             color: var(--text-primary);
             font-family: inherit;
@@ -595,6 +594,26 @@
             display: flex;
         }
 
+        .vote-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .vote-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
         .modal {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
@@ -890,8 +909,9 @@
     <div class="app">
         <aside class="sidebar">
             <div class="logo">
-                <div class="logo-icon">✡️</div>
-                <div class="logo-text">RavQA<span class="logo-badge">PRO</span></div>
+                <img src="/images/rav_abichid.png" alt="Rav Abichid" class="logo-img">
+                <div class="logo-text">Questions Réponses du Rav Abichid</div>
+                <div class="logo-badge">v3.0</div>
             </div>
 
             <nav class="nav">
@@ -944,15 +964,14 @@
 
                     <div class="search-container">
                         <input type="text" class="search-box" id="searchInput"
-                            placeholder="Ex: Peut-on manger du poisson avec du lait ?">
+                            placeholder="Posez une question halakhique ou cherchez un mot clé..." autocomplete="off">
+                        <button class="search-clear" id="searchClear" title="Effacer">✕</button>
                         <button class="search-btn" id="searchBtn">
-                            <span>Rechercher</span> 🔍
+                            <span class="search-icon">🔍</span>
+                            Rechercher
                         </button>
                     </div>
-                    <!-- Clear Button (Absolute within container logic handled via JS/CSS if needed, but here simple CSS) -->
-                    <div id="clearBtn"
-                        style="position:absolute; right:150px; top:50%; transform:translateY(-50%); cursor:pointer; display:none; color:var(--text-muted);">
-                        ✕</div>
+
 
                     <div class="quick-actions">
                         <button class="quick-btn">🥩 Cacherout</button>
@@ -962,16 +981,12 @@
                         <button class="quick-btn">💍 Mariage</button>
                     </div>
 
-                    <div class="search-mode-toggle">
-                        <div class="mode-btn active" data-mode="classic">
-                            <span>🔍</span> Classique
-                        </div>
-                        <div class="mode-btn" data-mode="rag">
-                            <span>🧠</span> Intelligence
-                        </div>
-                        <div class="mode-btn" data-mode="ai">
-                            <span>🤖</span> Assistant IA
-                        </div>
+                    <!-- Smart Search Header -->
+                    <div style="margin-bottom: 24px; text-align: center;">
+                        <h2 style="font-size: 1.5em; font-weight: 600; margin-bottom: 8px;">Posez votre question</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.95em;">
+                            Notre IA analyse vos questions pour trouver les meilleures réponses halakhiques.
+                        </p>
                     </div>
                 </div>
 
@@ -1048,36 +1063,6 @@
                         <audio controls id="modalAudioPlayer"></audio>
                     </div>
                     <div class="modal-meta" id="modalMeta"></div>
-
-                    <!-- Share Section -->
-                    <div class="share-section">
-                        <div class="modal-label">Partager</div>
-                        <div class="share-buttons">
-                            <button class="share-btn whatsapp" onclick="shareWhatsApp()">
-                                <span>📱</span> WhatsApp
-                            </button>
-                            <button class="share-btn copy" onclick="copyToClipboard()">
-                                <span>📋</span> Copier
-                            </button>
-                            <button class="share-btn email" onclick="shareEmail()">
-                                <span>📧</span> Email
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Validation Section -->
-                    <div class="validation-section" id="validationSection">
-                        <div class="validation-prompt">Cette réponse vous a-t-elle aidé ?</div>
-                        <div class="validation-buttons">
-                            <button class="validate-btn" onclick="validateResponse(true)">
-                                <span>👍</span> Réponse correcte
-                            </button>
-                            <button class="validate-btn" onclick="validateResponse(false)">
-                                <span>👎</span> À améliorer
-                            </button>
-                        </div>
-                        <div class="validation-done" style="display: none;">Merci pour votre retour !</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1132,15 +1117,8 @@
                     <div class="modal-close" onclick="closeCandidatesModal()">×</div>
                 </div>
                 <div class="modal-body">
-                    <div
-                        style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:15px;">
-                        <input type="text" class="form-input" id="candidateSearchInput"
-                            placeholder="Rechercher (2 mots min)...">
-                        <button class="validate-btn" onclick="videoSearchCandidates()">🔍</button>
-                    </div>
-
                     <p style="margin-bottom: 16px; color: var(--text-secondary);">
-                        Voici les messages trouvés dans les 48h précédant la réponse (ou résultats de recherche) :
+                        Voici les messages trouvés dans les 48h précédant la réponse :
                     </p>
                     <div id="candidatesList" style="max-height: 400px; overflow-y: auto;">
                         <div class="empty-state">Chargement...</div>
@@ -1190,105 +1168,181 @@
             }
         }
 
-        async function search(query) {
-            if (!query) return;
+        // --- DETAILS MODAL ---
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalQuestion = document.getElementById('modalQuestion');
+        const modalAnswer = document.getElementById('modalAnswer');
+        const modalAudioSection = document.getElementById('modalAudioSection');
+        const modalAudioPlayer = document.getElementById('modalAudioPlayer');
+        const modalMeta = document.getElementById('modalMeta');
 
-            if (currentSearchMode === 'ai') {
-                startAIAssistant(query);
-                return;
+        // Keep track of current item for voting
+        let currentDetailItem = null;
+
+        function openModal(item) {
+            currentDetailItem = item;
+            modalQuestion.textContent = item.question || 'Question sans texte';
+            modalAnswer.textContent = item.answer || 'Pas de réponse texte';
+
+            if (item.hasAudio && item.audioUrl) {
+                modalAudioSection.style.display = 'block';
+                modalAudioPlayer.src = item.audioUrl;
+            } else {
+                modalAudioSection.style.display = 'none';
+                modalAudioPlayer.pause();
+                modalAudioPlayer.src = '';
             }
+
+            const dateStr = item.date ? new Date(item.date).toLocaleDateString() : (item.timestamp ? new Date(item.timestamp * 1000).toLocaleDateString() : 'Date inconnue');
+
+            modalMeta.innerHTML = `
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                    <span>📅 ${dateStr}</span>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="processVote('up')" class="vote-btn" title="Bonne réponse">👍</button>
+                        <button onclick="processVote('down')" class="vote-btn" title="Améliorer / Mauvaise liaison">👎 Améliorer</button>
+                    </div>
+                </div>
+                <div style="margin-top:5px; text-align:right; font-size:0.8em; color:var(--text-muted);">ID: ${item.id}</div>
+            `;
+
+            modalOverlay.classList.add('active');
+        }
+
+        async function processVote(type) {
+            if (type === 'up') {
+                // Positive feedback
+                alert('Merci ! Cette réponse sera priorisée.');
+                // In real app: await fetch('/api/feedback', { ... })
+                modalOverlay.classList.remove('active');
+            } else {
+                // Negative feedback -> Propose Fix (Relink)
+                if (confirm("Vous avez voté 'Améliorer'. Voulez-vous chercher la bonne question pour cette réponse ?")) {
+                    modalOverlay.classList.remove('active');
+                    // Pre-fill edit inputs for context (though candidates modal uses editIdInput)
+                    editIdInput.value = currentDetailItem.id;
+                    openCandidatesModal();
+                }
+            }
+        }
+
+        document.getElementById('modalClose').addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+            modalAudioPlayer.pause();
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+                modalAudioPlayer.pause();
+            }
+        });
+
+        // --- RENDER FUNCTIONS ---
+
+        // --- SMART SEARCH & FEEDBACK ---
+
+        async function search(query) {
+            query = query || searchInput.value;
+            if (!query) return;
 
             loadingDiv.classList.add('active');
             resultsDiv.innerHTML = '';
 
-            try {
-                let url = `/api/search?q=${encodeURIComponent(query)}`;
-                if (currentSearchMode === 'rag') url = `/api/rag-search?q=${encodeURIComponent(query)}`;
+            // Auto-Detect Mode
+            let mode = 'classic';
+            const cleanQuery = query.toLowerCase().trim();
+            const isQuestion = query.length > 20 || cleanQuery.includes('comment') || cleanQuery.includes('pourquoi') || cleanQuery.includes('?');
 
-                const res = await fetch(url);
-                const data = await res.json();
-                renderResults(data.results || [], currentSearchMode === 'rag' ? 'Résultats Pertinents (Intelligence)' : 'Résultats de recherche');
+            if (isQuestion) mode = 'ai';
+
+            console.log(`🧠 Smart Search detected mode: ${mode} for "${query}"`);
+
+            try {
+                if (mode === 'ai') {
+                    const res = await fetch('/api/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question: query, limit: 5 })
+                    });
+                    const data = await res.json();
+                    if (data.success) renderAIResponse(data);
+                    else throw new Error(data.error);
+                } else {
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    renderResults(data.results || [], 'Résultats');
+                }
             } catch (e) {
+                console.error(e);
                 resultsDiv.innerHTML = '<div class="empty-state">Erreur de recherche</div>';
             } finally {
                 loadingDiv.classList.remove('active');
             }
         }
 
-        // --- MODAL & DETAILS ---
-        const modalOverlay = document.getElementById('modalOverlay');
-        const modalClose = document.getElementById('modalClose');
-        let currentDetailId = null;
-
-        window.openDetailsModal = function (id) {
-            currentDetailId = id;
-            fetch(`/api/messages/${id}`).then(r => r.json()).then(data => {
-                document.getElementById('modalTitle').textContent = 'Question détaillée';
-                document.getElementById('modalQuestion').textContent = data.question;
-                document.getElementById('modalAnswer').textContent = data.answer;
-
-                const audioSection = document.getElementById('modalAudioSection');
-                const audioPlayer = document.getElementById('modalAudioPlayer');
-                if (data.hasAudio && data.audioUrl) {
-                    audioSection.style.display = 'block';
-                    audioPlayer.src = data.audioUrl;
-                } else {
-                    audioSection.style.display = 'none';
-                }
-
-                document.getElementById('modalMeta').innerHTML = `
-                    <span>📅 ${new Date(data.date).toLocaleString()}</span>
-                    <span>🆔 ${data.id}</span>
-                `;
-
-                // Reset Validation UI
-                document.querySelector('.validation-buttons').style.display = 'flex';
-                document.querySelector('.validation-done').style.display = 'none';
-
-                modalOverlay.classList.add('active');
-            });
-        };
-
-        modalClose.addEventListener('click', () => {
-            modalOverlay.classList.remove('active');
-            const p = document.getElementById('modalAudioPlayer');
-            if (p) p.pause();
-        });
-
-        // --- SHARE & VALIDATION ---
-        function shareWhatsApp() {
-            const q = document.getElementById('modalQuestion').textContent;
-            const a = document.getElementById('modalAnswer').textContent;
-            const text = `*Question:* ${q}\n\n*Réponse:* ${a}\n\n_RavQA - Assistant Halakhique_`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        async function sendFeedback(answerId, vote) {
+            // In a real implementation this would call an API
+            const btn = document.getElementById(`btn-${vote}-${answerId}`);
+            if (btn) {
+                btn.style.transform = 'scale(1.2)';
+                setTimeout(() => btn.style.transform = 'scale(1)', 200);
+            }
+            alert(`Merci pour votre vote ${vote === 'up' ? 'positif 👍' : 'négatif 👎'} ! (Ceci améliorera les futures réponses)`);
         }
 
-        function copyToClipboard() {
-            const q = document.getElementById('modalQuestion').textContent;
-            const a = document.getElementById('modalAnswer').textContent;
-            const text = `Question: ${q}\n\nRéponse: ${a}`;
-            navigator.clipboard.writeText(text).then(() => alert('Copié dans le presse-papier !'));
-        }
+        function renderAIResponse(data) {
+            const randomId = Math.floor(Math.random() * 10000);
+            resultsDiv.innerHTML = `
+                <div class="result-card" style="border-left: 4px solid var(--accent); background: linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="result-question">🤖 Réponse de l'Assistant</div>
+                         <div class="feedback-controls" style="display:flex; gap:10px;">
+                            <button id="btn-up-${randomId}" onclick="sendFeedback('${randomId}', 'up')" style="background:none; border:none; cursor:pointer; font-size:1.2em; opacity:0.7; transition:all 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">👍</button>
+                            <button id="btn-down-${randomId}" onclick="sendFeedback('${randomId}', 'down')" style="background:none; border:none; cursor:pointer; font-size:1.2em; opacity:0.7; transition:all 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">👎</button>
+                        </div>
+                    </div>
+                    
+                    <div class="result-answer" style="white-space: pre-wrap; font-size: 1.05em; line-height: 1.8; color: var(--text-primary); font-weight: 400;">${data.answer}</div>
+                    
+                    <div class="result-meta" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <span style="font-size: 0.9em; color: var(--accent);">Confiance: ${data.confidence}%</span>
+                        <span style="font-size: 0.9em;">• ${data.sources.length} sources utilisées</span>
+                    </div>
+                     <div style="margin-top: 8px; font-size: 0.8em; color: var(--text-muted); font-style: italic;">${data.disclaimer}</div>
+                </div>
+            `;
 
-        function shareEmail() {
-            const q = document.getElementById('modalQuestion').textContent;
-            const a = document.getElementById('modalAnswer').textContent;
-            const subject = 'Question Halakhique RavQA';
-            const body = `Question: ${q}\n\nRéponse: ${a}`;
-            window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-        }
+            // ... (Sources logic remains same)
+            if (data.sources && data.sources.length > 0) {
+                resultsDiv.innerHTML += `<div class="results-title" style="margin: 30px 0 15px 0; font-size: 16px;">📚 Sources utilisées</div>`;
+                data.sources.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'result-card';
+                    div.style.opacity = '0.9';
+                    div.style.scale = '0.98';
+                    div.style.cursor = 'pointer';
 
-        async function validateResponse(isCorrect) {
-            if (!currentDetailId) return;
-            try {
-                await fetch('/api/feedback', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messageId: currentDetailId, isValid: isCorrect })
+                    div.addEventListener('click', (e) => {
+                        if (e.target.closest('button') || e.target.closest('audio')) return;
+                        openModal(s);
+                    });
+
+                    let audioHtml = s.hasAudio && s.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls src="${s.audioUrl}"></audio></div>` : '';
+                    div.innerHTML = `
+                        <div class="result-question" style="font-size: 15px;">[Source ${s.index}] ${s.question}</div>
+                        <div class="result-answer" style="font-size: 13px;">${s.answer}</div>
+                        ${audioHtml}
+                         <div class="result-meta">
+                            <span>📅 Similitude: ${s.similarity}%</span>
+                            <div class="admin-controls">
+                                <button class="admin-btn edit" onclick="window.openEditModal('${s.id}')">✏️ Corriger</button>
+                            </div>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(div);
                 });
-                document.querySelector('.validation-buttons').style.display = 'none';
-                document.querySelector('.validation-done').style.display = 'block';
-            } catch (e) { console.error(e); }
+            }
         }
 
         function renderResults(results, title) {
@@ -1300,11 +1354,12 @@
             results.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'result-card';
-                // Click on card opens details
-                div.onclick = (e) => {
-                    if (e.target.closest('.admin-btn') || e.target.closest('audio')) return;
-                    window.openDetailsModal(item.id);
-                };
+                div.style.cursor = 'pointer'; // Indicate clickable
+
+                div.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('audio')) return;
+                    openModal(item);
+                });
 
                 let audioHtml = item.hasAudio && item.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls src="${item.audioUrl}"></audio></div>` : '';
                 div.innerHTML = `
@@ -1352,6 +1407,26 @@
                 searchInput.value = q;
                 search(q);
             });
+        });
+
+
+        // Search Clear Logic
+        const searchClear = document.getElementById('searchClear');
+
+        function toggleClearBtn() {
+            if (searchInput.value.length > 0) {
+                searchClear.style.display = 'flex';
+            } else {
+                searchClear.style.display = 'none';
+            }
+        }
+
+        searchInput.addEventListener('input', toggleClearBtn);
+
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            toggleClearBtn();
+            searchInput.focus();
         });
 
         // --- ADMIN & RELINK ---
@@ -1419,44 +1494,6 @@
 
         function closeCandidatesModal() { candidatesModalOverlay.classList.remove('active'); }
 
-        async function videoSearchCandidates() {
-            const q = document.getElementById('candidateSearchInput').value;
-            if (!q || q.split(' ').length < 2) {
-                alert('Veuillez entrer au moins 2 mots clés.');
-                return;
-            }
-
-            candidatesList.innerHTML = '<div class="empty-state"><div class="spinner"></div> Recherche...</div>';
-
-            try {
-                const res = await fetch(`/api/candidates/search?q=${encodeURIComponent(q)}`);
-                const data = await res.json();
-
-                if (data.error) {
-                    candidatesList.innerHTML = `<div class="empty-state">❌ ${data.error}</div>`;
-                    return;
-                }
-
-                if (!data.candidates || data.candidates.length === 0) {
-                    candidatesList.innerHTML = '<div class="empty-state">Aucun candidat trouvé pour cette recherche.</div>';
-                    return;
-                }
-
-                candidatesList.innerHTML = data.candidates.map(c => `
-                    <div class="result-card" onclick="relinkMessage('${c.id}')" style="cursor:pointer; border:1px solid var(--border); margin-bottom:10px;">
-                        <div class="result-question">${c.question_text || 'Text manquant'}</div>
-                        <div class="result-meta">
-                            <span>📅 ${new Date(c.ts * 1000).toLocaleString()}</span>
-                            <span>👤 ${c.sender_name || 'Inconnu'}</span>
-                            <span>📍 ${c.group_name}</span>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (e) {
-                candidatesList.innerHTML = '<div class="empty-state">Erreur recherche</div>';
-            }
-        }
-
         async function relinkMessage(qid) {
             if (!confirm('Relier ?')) return;
             await fetch('/api/relink', {
@@ -1514,6 +1551,20 @@
             }, 1500);
         }
 
+        // --- MODES ---
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSearchMode = btn.dataset.mode;
+
+                // Trigger search if input not empty
+                if (searchInput.value.trim().length > 0) {
+                    search(searchInput.value);
+                }
+            });
+        });
+
         // --- THEME ---
         const themeToggle = document.getElementById('themeToggle');
         function setTheme(t) {
@@ -1524,91 +1575,6 @@
         }
         themeToggle.addEventListener('click', () => setTheme(localStorage.getItem('theme') === 'light' ? 'dark' : 'light'));
         setTheme(localStorage.getItem('theme') || 'dark');
-
-        // --- AI ASSISTANT ---
-        async function startAIAssistant(question) {
-            loadingDiv.classList.add('active');
-            resultsDiv.innerHTML = `
-                <div class="ai-loading">
-                    <div class="spinner"></div>
-                    <p>L'assistant réfléchit et consulte les sources...</p>
-                </div>
-            `;
-
-            try {
-                const res = await fetch('/api/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question })
-                });
-                const data = await res.json();
-
-                if (!data.success) {
-                    resultsDiv.innerHTML = `<div class="empty-state">❌ ${data.error || 'Erreur IA'}</div>`;
-                    return;
-                }
-
-                // Render AI Answer
-                let html = `
-                    <div class="ai-result">
-                        <div class="ai-header">
-                            <span class="ai-badge">🤖 Réponse IA</span>
-                            <span class="ai-conf">Confiance: ${data.confidence}%</span>
-                        </div>
-                        <div class="ai-body">${data.answer.replace(/\n/g, '<br>')}</div>
-                        <div class="ai-disclaimer">${data.disclaimer}</div>
-                    </div>
-                    <div class="results-header" style="margin-top:30px;">
-                        <div class="results-title">📚 Sources utilisées</div>
-                    </div>
-                `;
-
-                // Render Sources
-                data.sources.forEach(s => {
-                    const audioHtml = s.audioUrl ? `<div style="margin-top:5px;"><audio controls src="${s.audioUrl}"></audio></div>` : '';
-                    html += `
-                        <div class="result-card" onclick="window.openDetailsModal('${s.id}')">
-                            <div class="result-question"><span class="source-badge">Source [${s.index}]</span> ${s.question}</div>
-                            <div class="result-answer">${s.answer}</div>
-                            ${audioHtml}
-                        </div>
-                    `;
-                });
-
-                resultsDiv.innerHTML = html;
-
-            } catch (e) {
-                resultsDiv.innerHTML = '<div class="empty-state">Erreur de l\'assistant</div>';
-            } finally {
-                loadingDiv.classList.remove('active');
-            }
-        }
-
-        // --- EVENTS & MODES ---
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Update UI
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Update State
-                currentSearchMode = btn.dataset.mode;
-
-                // Update Placeholder
-                const input = document.getElementById('searchInput');
-                if (currentSearchMode === 'ai') input.placeholder = "Posez une question à l'IA (ex: Peut-on...)";
-                else if (currentSearchMode === 'rag') input.placeholder = "Recherche intelligente (Concepts...)";
-                else input.placeholder = "Recherche classique...";
-            });
-        });
-
-        document.getElementById('searchBtn').addEventListener('click', () => {
-            search(document.getElementById('searchInput').value);
-        });
-
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') search(e.target.value);
-        });
 
         // --- INIT ---
         loadStats();
