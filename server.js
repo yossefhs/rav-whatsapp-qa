@@ -101,13 +101,31 @@ function getDB() {
 // Health check
 app.get('/api/health', (req, res) => {
     const db = getDB();
-    const stats = db.prepare('SELECT COUNT(*) as total FROM messages WHERE deleted_at IS NULL').get();
+    // const stats = ...
     db.close();
+
+    let dbSize = 0;
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            dbSize = fs.statSync(DB_PATH).size;
+        }
+    } catch (e) { }
+
+    let messageCount = 0;
+    try {
+        const db = new Database(DB_PATH, { fileMustExist: true }); // Use local new Database to avoid logic
+        messageCount = db.prepare('SELECT COUNT(*) as total FROM messages WHERE deleted_at IS NULL').get().total;
+        db.close();
+    } catch (e) {
+        messageCount = -1; // Error or missing DB
+    }
 
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        messages: stats.total,
+        messages: messageCount,
+        dbSizeBytes: dbSize,
+        dbPath: DB_PATH,
         uptime: Math.floor(process.uptime())
     });
 });
