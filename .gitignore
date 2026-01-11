@@ -1,15 +1,106 @@
-node_modules
-.DS_Store
+# ===================================
+# Node.js / NPM
+# ===================================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn.lock
+package-lock.json
+
+# ===================================
+# Build / Dist
+# ===================================
+dist/
+build/
+.next/
+out/
+
+# ===================================
+# Environment & Secrets
+# ===================================
 .env
-!media/
-media/*.zip
-uploads
-qr.png
-.ravbot
-temp_import_*
-npm-debug.log
-worker-*.txt
+.env.*
+!.env.example
+firebase-credentials.json
+cookies.txt
+
+# ===================================
+# WhatsApp / Bot Data
+# ===================================
+.wwebjs_auth/
+.wwebjs_cache/
+.pm2/
+.ravbot/
+
+# ===================================
+# Media & Uploads (large files)
+# ===================================
+media/
+media_blocked/
+uploads/
 *.mp3
 *.ogg
+*.wav
+*.m4a
+*.opus
+*.png
+*.jpg
+*.jpeg
+*.gif
+qr.png
+qr_b64.txt
+manual_qr*.png
+
+# ===================================
+# Database & Backups
+# ===================================
+*.db
+*.db-shm
+*.db-wal
+!ravqa.db.zip
+backups/
+
+# ===================================
+# Logs & Temp Files
+# ===================================
+logs/
+*.log
+nohup.out
+transcription*.log
+bot_loop.log
+server.log
+
+# ===================================
+# Temp Directories
+# ===================================
+temp_*/
+whatsapp_temp*/
+temp_import*/
+temp_restore/
+drive_download/
+digests/
+
+# ===================================
+# IDE & System
+# ===================================
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===================================
+# WhatsApp Export Archives
+# ===================================
 *.zip
-.nvmrc
+WhatsApp Chat*/
+
+# ===================================
+# Backup / Broken Files
+# ===================================
+*.backup
+*.bak
+*.broken
+*.pre_restore
+*.new_version_backup

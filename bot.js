@@ -5,8 +5,26 @@ const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const Database = require('better-sqlite3');
-const halakhaAi = require('./halakha_ai'); // IA Locale
-const OpenAI = require('openai'); // IA Cloud
+const halakhaAi = require('./halakha_ai');
+const OpenAI = require('openai');
+const { execSync } = require('child_process');
+
+// AUTO-RESTORE DB (Fix for Railway)
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
+const DB_ZIP = path.join(__dirname, 'ravqa.db.zip');
+
+if (!fs.existsSync(DB_PATH) && fs.existsSync(DB_ZIP)) {
+  console.log('📦 Found ravqa.db.zip, checking if restore needed...');
+  try {
+    console.log('🔄 Unzipping database...');
+    execSync(`unzip -o "${DB_ZIP}" -d "${__dirname}"`);
+    console.log('✅ Database restored from zip');
+  } catch (e) {
+    console.error('❌ Failed to unzip database:', e);
+  }
+} else {
+  console.log('⏩ Skipping DB restore (DB exists or no zip).');
+}
 
 let openai = null;
 if (process.env.OPENAI_API_KEY) {
@@ -143,7 +161,7 @@ async function runSmartCatchUp() {
 // ===============
 
 // Hardcode temporaire pour forcer l'appairage
-const PHONE_NUMBER = '972546314770'; // process.env.LINK_PHONE_NUMBER;
+const PHONE_NUMBER = process.env.LINK_PHONE_NUMBER;
 
 client.on('qr', async (qr) => {
   // Mode Appairage par Code (Plus stable pour le cloud)
@@ -241,11 +259,23 @@ client.on('message_create', async msg => {
 });
 
 // Init
-console.log('🚀 Initializing WhatsApp Bot...');
-client.initialize().catch(e => {
-  console.error('❌ Init Error:', e);
-  safeRestart('Init Error');
-});
+// Initialisation du Bot
+async function initBot() {
+  console.log('🚀 Initializing WhatsApp Bot...');
+  try {
+    await client.initialize();
+    console.log('✅ Bot initialization started');
+  } catch (e) {
+    console.error('❌ Bot initialization failed:', e);
+    throw e;
+  }
+}
+
+module.exports = {
+  client,
+  initBot,
+  GROUPS
+};
 
 // Watchdog
 let lastEvent = Date.now();
