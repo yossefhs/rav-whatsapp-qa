@@ -99,6 +99,16 @@ function getDB() {
 // =============================================================================
 
 // Health check
+// Manual debug endpoints
+app.post('/api/debug/force-restore', async (req, res) => {
+    try {
+        await require('./restore_db')();
+        res.json({ success: true, message: 'Restore triggered. Check logs.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/health', (req, res) => {
     const db = getDB();
     // const stats = ...

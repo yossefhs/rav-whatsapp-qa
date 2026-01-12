@@ -26,6 +26,13 @@ function loadVectors() {
         return vectorsCache;
     }
 
+    // Check for DB before opening
+    const fs = require('fs');
+    if (!fs.existsSync(DB_PATH)) {
+        console.warn('⚠️ vector search cancelled: DB not found');
+        return [];
+    }
+
     console.log('🔄 Chargement des vecteurs en mémoire...');
     const db = new Database(DB_PATH, { readonly: true });
     try {
@@ -33,10 +40,14 @@ function loadVectors() {
         const rows = db.prepare(`
             SELECT e.id, e.vector, 
                    m.question_text, m.transcript_torah, m.transcript_raw, m.audio_path,
-                   m.ts, m.group_name, m.relevance_score
+                   m.ts, m.group_name, m.relevance_score,
+                   -- Calcul du score de pertinence basé sur les votes (Net Promoter Score simplifié)
+                   COALESCE(SUM(CASE WHEN f.is_valid = 1 THEN 1 WHEN f.is_valid = 0 THEN -1 ELSE 0 END), 0) as feedback_score
             FROM message_embeddings e
             JOIN messages m ON e.id = m.id
+            LEFT JOIN feedback f ON m.id = f.message_id
             WHERE m.deleted_at IS NULL
+            GROUP BY m.id
         `).all();
 
         vectorsCache = rows.map(r => ({
@@ -47,7 +58,8 @@ function loadVectors() {
                 answer: r.transcript_torah || r.transcript_raw,
                 audio_path: r.audio_path,
                 timestamp: r.ts,
-                group_name: r.group_name
+                group_name: r.group_name,
+                feedback_score: r.feedback_score // Store score for reranking
             },
             relevance_score: r.relevance_score || 0.5
         }));
@@ -85,35 +97,23 @@ async function getEmbedding(text) {
     return response.data[0].embedding;
 }
 
-// Recherche Locale (Hybride & Apprentissage)
+// Recherche Locale
 async function searchLocal(query, limit = 10) {
     try {
         const queryVector = await getEmbedding(query);
         const vectors = loadVectors();
 
-        // Mots-clés pour recherche hybride simple
-        const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-
-        // Calcul score pour tous
+        // Calcul score pour tous avec Boost Feedback
         const results = vectors.map(v => {
-            const cosSim = cosineSimilarity(queryVector, v.vector);
+            const cosine = cosineSimilarity(queryVector, v.vector);
 
-            // 1. Boost Apprentissage (Relevance Score)
-            // Base score 0.5 -> multiplicateur 1.0
-            // Score 1.0 (très validé) -> multiplicateur 1.2 (+20%)
-            const relevanceBoost = 1.0 + ((v.relevance_score || 0.5) - 0.5) * 0.4;
-
-            // 2. Boost Hybride (Mots-clés exacts)
-            // Si la question contient un mot clé rare, petit boost
-            let keywordBonus = 0;
-            const qLower = (v.payload.question || '').toLowerCase();
-            keywords.forEach(k => {
-                if (qLower.includes(k)) keywordBonus += 0.05;
-            });
+            // Boost: +5% par vote positif (net), borné à +/- 20%
+            const boost = Math.min(Math.max((v.payload.feedback_score || 0) * 0.05, -0.2), 0.2);
 
             return {
                 ...v,
-                score: (cosSim * relevanceBoost) + keywordBonus
+                raw_score: cosine,
+                score: cosine * (1 + boost)
             };
         });
 
