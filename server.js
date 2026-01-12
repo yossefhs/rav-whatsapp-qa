@@ -104,28 +104,29 @@ app.get('/api/health', (req, res) => {
     // const stats = ...
     db.close();
 
-    let dbSize = 0;
-    try {
-        if (fs.existsSync(DB_PATH)) {
-            dbSize = fs.statSync(DB_PATH).size;
-        }
-    } catch (e) { }
+    let dbInfo = { exists: false, size: 0, path: DB_PATH };
+    try { if (fs.existsSync(DB_PATH)) dbInfo = { exists: true, size: fs.statSync(DB_PATH).size, path: DB_PATH }; } catch (e) { }
+
+    let zipInfo = { exists: false, size: 0 };
+    try { const z = './ravqa.db.zip'; if (fs.existsSync(z)) zipInfo = { exists: true, size: fs.statSync(z).size }; } catch (e) { }
+
+    let dirFiles = [];
+    try { dirFiles = fs.readdirSync(__dirname).map(f => `${f} (${fs.statSync(path.join(__dirname, f)).size})`); } catch (e) { }
 
     let messageCount = 0;
     try {
-        const db = new Database(DB_PATH, { fileMustExist: true }); // Use local new Database to avoid logic
+        const db = new Database(DB_PATH, { fileMustExist: true });
         messageCount = db.prepare('SELECT COUNT(*) as total FROM messages WHERE deleted_at IS NULL').get().total;
         db.close();
-    } catch (e) {
-        messageCount = -1; // Error or missing DB
-    }
+    } catch (e) { messageCount = -1; }
 
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         messages: messageCount,
-        dbSizeBytes: dbSize,
-        dbPath: DB_PATH,
+        db: dbInfo,
+        zip: zipInfo,
+        files: dirFiles.filter(f => f.includes('ravqa') || f.includes('.zip')),
         uptime: Math.floor(process.uptime())
     });
 });
