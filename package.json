@@ -1,33 +1,33 @@
 {
-  "name": "rav-whatsapp-local",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "adm-zip": "^0.5.16",
-    "better-sqlite3": "^12.2.0",
-    "dotenv": "^17.2.2",
-    "express": "^5.1.0",
-    "firebase-admin": "^13.6.0",
-    "ioredis": "^5.8.2",
-    "multer": "^2.0.2",
-    "openai": "^5.20.1",
-    "pm2": "^6.0.14",
-    "qrcode": "^1.5.4",
-    "qrcode-terminal": "^0.12.0",
-    "sqlite3": "^5.1.7",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main"
-  }
+    "name": "rav-whatsapp-local",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "pm2-runtime start pm2.config.js",
+        "dev": "node server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "adm-zip": "^0.5.16",
+        "better-sqlite3": "^12.2.0",
+        "dotenv": "^17.2.2",
+        "express": "^5.1.0",
+        "firebase-admin": "^13.6.0",
+        "ioredis": "^5.8.2",
+        "multer": "^2.0.2",
+        "openai": "^5.20.1",
+        "pm2": "^6.0.14",
+        "qrcode": "^1.5.4",
+        "qrcode-terminal": "^0.12.0",
+        "sqlite3": "^5.1.7",
+        "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main"
+    }
 }

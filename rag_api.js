@@ -26,13 +26,6 @@ function loadVectors() {
         return vectorsCache;
     }
 
-    // Check for DB before opening
-    const fs = require('fs');
-    if (!fs.existsSync(DB_PATH)) {
-        console.warn('⚠️ vector search cancelled: DB not found');
-        return [];
-    }
-
     console.log('🔄 Chargement des vecteurs en mémoire...');
     const db = new Database(DB_PATH, { readonly: true });
     try {

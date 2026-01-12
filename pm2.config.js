@@ -2,7 +2,7 @@ module.exports = {
     apps: [
         {
             name: 'rav-server',
-            script: './debug_server.js',
+            script: './server.js',
             instances: 1,
             autorestart: true,
             watch: false,
@@ -11,7 +11,12 @@ module.exports = {
                 NODE_ENV: 'production',
                 PORT: 3000
             }
-        },
-
+        }
+        // Bot désactivé pour Railway (nécessite QR local)
+        // {
+        //     name: 'rav-bot',
+        //     script: './bot.js',
+        //     ...
+        // }
     ]
 };
