@@ -1,42 +1,34 @@
 FROM node:18-slim
 
-# Installation des dépendances pour Puppeteer (Chrome) et FFmpeg
-RUN apt-get update && apt-get install -y \
-    git \
-    openssh-client \
-    ca-certificates \
-    python3 \
-    build-essential \
-    chromium \
-    ffmpeg \
-    unzip \
-    fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+# DEBUG MODE - NUCLEAR OPTION
+# Commenting out heavy dependencies to prove basic connectivity
 
-# Variables d'environnement pour Puppeteer
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# RUN apt-get update && apt-get install -y \
+#     git \
+#     openssh-client \
+#     ca-certificates \
+#     python3 \
+#     build-essential \
+#     chromium \
+#     ffmpeg \
+#     unzip \
+#     fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+#     --no-install-recommends \
+#     && rm -rf /var/lib/apt/lists/*
+
+# ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Copie des fichiers de dépendances
-COPY package*.json ./
+# COPY package*.json ./
+# RUN npm install --production
+# RUN npm install -g pm2
 
-# Installation des dépendances Node.js
-RUN npm install --production
+COPY debug_server.js .
 
-# Installation de PM2 globalement
-RUN npm install -g pm2
+# RUN mkdir -p uploads media .ravbot/chrome-profile
 
-# Copie du reste de l'application
-COPY . .
-
-# Création des dossiers nécessaires
-RUN mkdir -p uploads media .ravbot/chrome-profile
-
-# Exposition du port
 EXPOSE 3000
 
-# Commande de démarrage via PM2
-CMD ["npm", "start"]
+CMD ["node", "debug_server.js"]
