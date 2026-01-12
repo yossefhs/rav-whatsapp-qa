@@ -599,7 +599,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 RavQA Server v2.0`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`📂 Database: ${DB_PATH}`);
