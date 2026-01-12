@@ -1462,11 +1462,17 @@
             } catch (e) { alert('Erreur'); }
         }
 
-        async function deleteMessage(id) {
-            if (!confirm('Supprimer ?')) return;
-            await fetch(`/api/messages/${id}`, { method: 'DELETE' });
-            loadRecentMessages();
-        }
+        window.deleteMessage = async function (id) {
+            if (!confirm('Supprimer ce message ?')) return;
+            try {
+                const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Erreur suppression');
+                alert('Message supprimé');
+                loadRecentMessages();
+            } catch (e) {
+                alert('Erreur: ' + e.message);
+            }
+        };
 
         async function unlinkMessage() {
             if (!confirm('Délier ?')) return;
