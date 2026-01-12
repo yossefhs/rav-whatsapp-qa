@@ -12,3 +12,4 @@ worker-*.txt
 *.mp3
 *.ogg
 *.zip
+!ravqa.db.zip
