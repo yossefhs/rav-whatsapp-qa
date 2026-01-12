@@ -11,4 +11,5 @@ npm-debug.log
 worker-*.txt
 *.mp3
 *.ogg
-*.zip
+# *.zip - COMMENTED OUT to verify if this blocks db zip
+!ravqa.db.zip
