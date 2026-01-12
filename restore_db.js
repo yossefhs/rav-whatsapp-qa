@@ -5,6 +5,8 @@ const AdmZip = require('adm-zip');
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
 const DB_ZIP = path.join(__dirname, 'ravqa.db.zip');
 
+const { execSync } = require('child_process');
+
 async function restoreDatabase() {
     console.log('🔍 Checking Database status...');
 
@@ -36,10 +38,8 @@ async function restoreDatabase() {
     if (shouldRestore) {
         console.log(`📦 Restore Triggered: ${cause}`);
         try {
-            console.log('🔄 Unzipping database (Async)...');
-            const zip = new AdmZip(DB_ZIP);
-
-            // Determine extraction target based on DB_PATH
+            // Determine extraction target based on DB_PATH logic
+            // If DB_PATH is /data/ravqa.db, want directory /data
             const extractDir = path.dirname(DB_PATH);
 
             // Ensure target directory exists (e.g. /data volume)
@@ -48,11 +48,25 @@ async function restoreDatabase() {
                 fs.mkdirSync(extractDir, { recursive: true });
             }
 
-            console.log(`📂 Extracting to: ${extractDir}`);
-            zip.extractAllTo(extractDir, true);
-            console.log(`✅ Database restored successfully to ${DB_PATH}`);
+            console.log(`🔄 Unzipping database using System UNZIP (Memory Safe)...`);
+            console.log(`   Source: ${DB_ZIP}`);
+            console.log(`   Target: ${extractDir}`);
+
+            // Using system unzip: -o (overwrite), -d (directory)
+            // execSync blocks safely without OOMing the Node process
+            try {
+                execSync(`unzip -o "${DB_ZIP}" -d "${extractDir}"`, { stdio: 'inherit' });
+                console.log(`✅ Database restored successfully to ${extractDir}`);
+            } catch (err) {
+                // Fallback if unzip missing? Unlikely if we updated Dockerfile.
+                // But for local mac if unzip exists it works.
+                console.error('❌ System unzip failed, falling back to AdmZip (Warning: High Memory)', err);
+                const zip = new AdmZip(DB_ZIP);
+                zip.extractAllTo(extractDir, true);
+            }
+
         } catch (e) {
-            console.error('❌ Failed to unzip database:', e);
+            console.error('❌ Failed to restore database:', e);
         }
     } else {
         console.log('✅ Database exists and looks healthy. No restore needed.');
