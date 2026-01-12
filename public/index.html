@@ -1369,14 +1369,39 @@
                     <div class="result-meta">
                         <span>📅 ${new Date(item.date).toLocaleDateString()}</span>
                         <div class="admin-controls">
-                            <button class="admin-btn edit" onclick="window.openEditModal('${item.id}')">✏️ Corriger</button>
-                            <button class="admin-btn delete" onclick="deleteMessage('${item.id}')">🗑️ Supprimer</button>
+                            <button class="admin-btn edit" data-action="edit" data-id="${item.id}">✏️ Corriger</button>
+                            <button class="admin-btn delete" data-action="delete" data-id="${item.id}">🗑️ Supprimer</button>
                         </div>
                     </div>
                 `;
                 resultsDiv.appendChild(div);
             });
         }
+
+        // --- EVENT DELEGATION FOR ADMIN BUTTONS ---
+        resultsDiv.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+
+            if (action === 'delete') {
+                e.stopPropagation();
+                if (!confirm('Supprimer ce message ?')) return;
+                try {
+                    const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Erreur serveur');
+                    alert('Message supprimé ✓');
+                    loadRecentMessages();
+                } catch (err) {
+                    alert('Erreur: ' + err.message);
+                }
+            } else if (action === 'edit') {
+                e.stopPropagation();
+                window.openEditModal(id);
+            }
+        });
 
         // --- EVENTS ---
         document.getElementById('searchBtn').addEventListener('click', () => search(searchInput.value));
