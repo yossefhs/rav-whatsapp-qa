@@ -71,11 +71,11 @@ const { initBot } = require('./bot'); // Import Bot
 // HEALTH CHECK (Vital pour Railway)
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
-// Lancement du Bot (Délai de sécurité pour laisser le serveur HTTP démarrer)
-setTimeout(() => {
-    console.log('⏳ Starting Bot after delay...');
-    initBot().catch(err => console.error('❌ Bot Init Error:', err));
-}, 30000);
+// Lancement du Bot (DÉSACTIVÉ TEMPORAIREMENT POUR DEBUG CRASH)
+// setTimeout(() => {
+//     console.log('⏳ Starting Bot after delay...');
+//     initBot().catch(err => console.error('❌ Bot Init Error:', err));
+// }, 30000);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
