@@ -9,7 +9,16 @@ const OpenAI = require('openai');
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
 const COLLECTION = 'halakhic_qa';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai = null;
+try {
+    if (process.env.OPENAI_API_KEY) {
+        openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    } else {
+        console.warn('⚠️ OPENAI_API_KEY non défini - AI Assistant désactivé');
+    }
+} catch (e) {
+    console.error('❌ OpenAI init error:', e.message);
+}
 
 const { searchLocal } = require('./rag_api');
 

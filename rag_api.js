@@ -13,7 +13,16 @@ const DB_PATH = process.env.DB_PATH || './ravqa.db';
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
 const COLLECTION = 'halakhic_qa';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai = null;
+try {
+    if (process.env.OPENAI_API_KEY) {
+        openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    } else {
+        console.warn('⚠️ OPENAI_API_KEY non défini - RAG désactivé');
+    }
+} catch (e) {
+    console.error('❌ OpenAI init error:', e.message);
+}
 // Database is instantiated per request or cached? Better to instantiate once here if serverless isn't an issue.
 // For this continuous server architecture, one instance is fine.
 // Cache des vecteurs en mémoire
