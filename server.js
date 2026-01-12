@@ -21,8 +21,8 @@ app.get('/health', (req, res) => {
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Fallback to index.html for SPA
-app.get('*', (req, res) => {
+// Fallback to index.html for SPA (Express 5 compatible)
+app.use((req, res) => {
     const indexPath = path.join(__dirname, 'public', 'index.html');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
