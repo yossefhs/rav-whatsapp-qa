@@ -1,23 +1,16 @@
-const express = require('express');
-const app = express();
+const http = require('http');
 const port = process.env.PORT || 3000;
 
-console.log('🏁 Starting DEBUG Server...');
+console.log('🏁 Starting PURE NODE Server...');
 console.log(`Port asked: ${port}`);
 
-app.get('/', (req, res) => {
-    res.send('✅ DEBUG SERVER WORKING. Node is healthy. Issue is in application dependencies.');
+const server = http.createServer((req, res) => {
+    console.log(`Request received: ${req.url}`);
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('✅ PURE NODE SERVER WORKING. No dependencies used.\n');
 });
 
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
-
-// Catch-all
-app.use((req, res) => {
-    res.send('DEBUG SERVER CATCH-ALL');
-});
-
-app.listen(port, '0.0.0.0', () => {
-    console.log(`✅ Debug server listening on 0.0.0.0:${port}`);
+server.listen(port, '0.0.0.0', () => {
+    console.log(`✅ Server running at http://0.0.0.0:${port}/`);
 });
