@@ -66,7 +66,7 @@ const upload = multer({
 
 // Initialisation
 const app = express();
-const { initBot } = require('./bot'); // Import Bot
+// const { initBot } = require('./bot'); // DISABLED: Puppeteer crashes without Chromium
 
 // HEALTH CHECK (Vital pour Railway)
 app.get('/health', (req, res) => res.status(200).send('OK'));
