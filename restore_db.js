@@ -38,17 +38,19 @@ async function restoreDatabase() {
         try {
             console.log('🔄 Unzipping database (Async)...');
             const zip = new AdmZip(DB_ZIP);
-            // Async unzip not supported well by adm-zip synchronously, but we wrap in async function
-            // to essentially run it in the main event loop tick but we are called asynchronously.
-            // Actually adm-zip is synchronous. We should accept the brief blocking OR use async version if available.
-            // AdmZip extractAllTo is sync. 
-            // BUT, if we call this AFTER app.listen, inside a setImmediate or just async function call,
-            // the server is ALREADY listening. It will briefly block the Event Loop (CPU bound), 
-            // stopping new requests processing for ~1-2s, but the PORT IS OPEN.
-            // This is safer than blocking BEFORE app.listen.
 
-            zip.extractAllTo(__dirname, true);
-            console.log('✅ Database restored successfully');
+            // Determine extraction target based on DB_PATH
+            const extractDir = path.dirname(DB_PATH);
+
+            // Ensure target directory exists (e.g. /data volume)
+            if (!fs.existsSync(extractDir)) {
+                console.log(`📂 Creating directory: ${extractDir}`);
+                fs.mkdirSync(extractDir, { recursive: true });
+            }
+
+            console.log(`📂 Extracting to: ${extractDir}`);
+            zip.extractAllTo(extractDir, true);
+            console.log(`✅ Database restored successfully to ${DB_PATH}`);
         } catch (e) {
             console.error('❌ Failed to unzip database:', e);
         }
