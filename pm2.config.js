@@ -2,7 +2,7 @@ module.exports = {
     apps: [
         {
             name: 'rav-server',
-            script: './server.js',
+            script: './debug_server.js',
             instances: 1,
             autorestart: true,
             watch: false,
