@@ -57,6 +57,8 @@ manual_qr*.png
 *.db
 *.db-shm
 *.db-wal
+*.db.zip
+ravqa.db*
 !ravqa.db.zip
 backups/
 
