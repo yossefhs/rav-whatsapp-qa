@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     chromium \
     ffmpeg \
+    curl \
+    unzip \
     fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
