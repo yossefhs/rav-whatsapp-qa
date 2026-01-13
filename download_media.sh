@@ -15,34 +15,18 @@ if [ "$MP3_COUNT" -gt 100 ]; then
     exit 0
 fi
 
-# Download from Google Drive with improved logic
-COOKIE_FILE="/tmp/gcookie"
-RESPONSE_FILE="/tmp/gresponse"
+# Download using Python script (more reliable for Google Drive cookies)
+echo "📥 Downloading media files using Python script..."
 
-echo "   1. Fetching confirmation token..."
-# Get the page/cookie
-curl -c "$COOKIE_FILE" -L "https://drive.google.com/uc?export=download&id=${FILE_ID}" > "$RESPONSE_FILE" 2>/dev/null
-
-# Extract confirmation code (robust grep)
-CONFIRM=$(grep -o 'confirm=[0-9A-Za-z_]*' "$RESPONSE_FILE" | cut -d= -f2 | head -n1)
-
-URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
-if [ -n "$CONFIRM" ]; then
-    echo "   🔑 Found confirmation token: $CONFIRM"
-    URL="${URL}&confirm=${CONFIRM}"
-else
-    echo "   ℹ️ No confirmation token found (file might be small or direct download)"
+if [ ! -f "download_drive.py" ]; then
+    echo "❌ Error: download_drive.py not found"
+    exit 1
 fi
 
-echo "   2. Downloading binary..."
-curl -Lb "$COOKIE_FILE" "$URL" -o /tmp/media.zip
+python3 download_drive.py "$FILE_ID" "/tmp/media.zip"
 
-echo "   3. Verifying download..."
-# Check size > 10KB
-FILESIZE=$(stat -c%s "/tmp/media.zip" 2>/dev/null || stat -f%z "/tmp/media.zip")
-if [ "$FILESIZE" -lt 10000 ]; then
-    echo "❌ Downloaded file is too small ($FILESIZE bytes). Content:"
-    cat /tmp/media.zip
+if [ $? -ne 0 ]; then
+    echo "❌ Python script failed"
     exit 1
 fi
 
@@ -53,6 +37,6 @@ if ! command -v unzip &> /dev/null; then
     apt-get update && apt-get install -y unzip
 fi
 
-unzip -o /tmp/media.zip -d "$MEDIA_DIR"
-rm /tmp/media.zip "$COOKIE_FILE" "$RESPONSE_FILE"
+unzip -o /tmp/media.zip -d "$MEDIA_DIR" > /dev/null
+rm /tmp/media.zip
 echo "✅ Media files extracted successfully"
