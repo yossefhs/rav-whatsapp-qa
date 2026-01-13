@@ -272,6 +272,29 @@
             box-shadow: 0 8px 24px var(--accent-glow);
         }
 
+        .search-clear {
+            position: absolute;
+            right: 150px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: none;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .search-clear:hover {
+            color: var(--text-primary);
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
         /* Quick Actions */
         .quick-actions {
             display: flex;
@@ -996,12 +1019,21 @@
             .search-box {
                 font-size: 16px;
                 /* Prevents zoom on iOS */
-                padding: 14px 16px;
+                padding: 14px 50px 14px 16px;
+                padding-right: 50px;
+                /* Space for clear button */
+            }
+
+            .search-clear {
+                right: 12px;
             }
 
             .search-btn {
+                position: static;
+                transform: none;
                 width: 100%;
                 justify-content: center;
+                padding: 16px;
             }
 
             .quick-actions {
@@ -1832,6 +1864,27 @@
 
         // --- INIT ---
 
+        // Detect iOS for audio compatibility warning
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // Handle audio errors globally
+        document.addEventListener('error', function (e) {
+            if (e.target.tagName === 'AUDIO') {
+                const audioEl = e.target;
+                const parent = audioEl.parentElement;
+                if (parent && !parent.querySelector('.audio-error')) {
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'audio-error';
+                    errorMsg.style.cssText = 'padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #ef4444; font-size: 13px; margin-top: 8px;';
+                    errorMsg.innerHTML = isIOS
+                        ? '⚠️ Format audio non supporté sur iOS. Utilisez un ordinateur pour écouter.'
+                        : '⚠️ Impossible de lire l\'audio. Essayez de rafraîchir la page.';
+                    audioEl.style.display = 'none';
+                    parent.appendChild(errorMsg);
+                }
+            }
+        }, true);
         // Mobile Menu Toggle
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('sidebar');
