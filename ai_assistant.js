@@ -27,16 +27,29 @@ const { searchLocal } = require('./rag_api');
  */
 async function searchSimilarQA(query, limit = 5) {
     try {
-        const results = await searchLocal(query, limit);
+        // Request more results initially for deduplication
+        const results = await searchLocal(query, limit * 2);
 
-        return results.map((r, index) => ({
+        // Deduplicate based on similar content
+        const seen = new Set();
+        const uniqueResults = results.filter(r => {
+            // Create a content signature (first 100 chars of answer)
+            const signature = (r.answer || '').substring(0, 100).toLowerCase().replace(/\s+/g, ' ');
+            if (seen.has(signature)) return false;
+            seen.add(signature);
+            return true;
+        });
+
+        return uniqueResults.slice(0, limit).map((r, index) => ({
             index: index + 1,
             id: r.id,
             score: r.score,
             question: r.question || '',
             answer: r.answer || '',
             audio_path: r.audio_path,
-            hasAudio: !!r.audio_path
+            hasAudio: !!r.audio_path,
+            timestamp: r.timestamp, // Add date
+            date: r.timestamp ? new Date(r.timestamp * 1000).toLocaleDateString('fr-FR') : null
         }));
     } catch (error) {
         console.error('Local search error:', error);
@@ -55,9 +68,9 @@ async function generateAnswer(question, sources) {
         };
     }
 
-    // Construire le contexte des sources
+    // Construire le contexte des sources avec date
     const sourcesContext = sources.map(s =>
-        `[Source ${s.index}]\nQuestion: ${s.question}\nRéponse du Rav: ${s.answer}\n`
+        `[Source ${s.index}] (${s.date || 'Date inconnue'})\nQuestion: ${s.question}\nRéponse du Rav: ${s.answer}\n`
     ).join('\n---\n');
 
     const systemPrompt = `Tu es un assistant expert en Halakha (Loi Juive) basé UNIQUEMENT sur les enseignements du Rav Abichid.
@@ -151,7 +164,8 @@ async function askAssistant(question, options = {}) {
             id: s.id,
             index: s.index,
             question: s.question,
-            answer: s.answer.substring(0, 300) + (s.answer.length > 300 ? '...' : ''),
+            answer: s.answer, // Full transcription
+            date: s.date, // Date of the message
             similarity: Math.round(s.score * 100),
             hasAudio: s.hasAudio,
             audioUrl: s.audio_path ? `/audio/${require('path').basename(s.audio_path)}` : null

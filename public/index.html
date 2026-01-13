@@ -1660,7 +1660,7 @@
                         <div class="result-answer" style="font-size: 13px;">${s.answer}</div>
                         ${audioHtml}
                          <div class="result-meta">
-                            <span>📅 Similitude: ${s.similarity}%</span>
+                            <span>📅 ${s.date || 'Date inconnue'} • Similarité: ${s.similarity}%</span>
                             <div class="admin-controls">
                                 <button class="admin-btn edit" onclick="window.openEditModal('${s.id}')">✏️ Corriger</button>
                             </div>
