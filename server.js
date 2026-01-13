@@ -620,6 +620,33 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Debug endpoint to check media files
+app.get('/api/debug/media', (req, res) => {
+    const mediaDir = path.join(__dirname, 'media');
+    try {
+        if (!fs.existsSync(mediaDir)) {
+            return res.json({ error: 'Media directory not found', path: mediaDir });
+        }
+        const files = fs.readdirSync(mediaDir);
+        const mp3Count = files.filter(f => f.endsWith('.mp3')).length;
+        const oggCount = files.filter(f => f.endsWith('.ogg')).length;
+        const sampleFiles = files.slice(0, 10).map(f => ({
+            name: f,
+            size: fs.statSync(path.join(mediaDir, f)).size
+        }));
+
+        res.json({
+            totalFiles: files.length,
+            mp3Count,
+            oggCount,
+            mediaPath: mediaDir,
+            samples: sampleFiles
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message, stack: error.stack });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`\n🚀 RavQA Server v2.0`);
     console.log(`📍 http://localhost:${PORT}`);
