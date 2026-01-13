@@ -72,13 +72,8 @@ if [ "$FILESIZE" -lt 1000000 ]; then
     exit 1
 fi
 
+# Unzip (unzip is installed via Dockerfile)
 echo "📦 Extracting media files..."
-# Install unzip if missing
-if ! command -v unzip &> /dev/null; then
-    echo "   Installing unzip..."
-    apt-get update && apt-get install -y unzip
-fi
-
 unzip -o "$FINAL_FILE" -d "$MEDIA_DIR" > /dev/null
 rm "$FINAL_FILE"
 echo "✅ Media files extracted successfully"
