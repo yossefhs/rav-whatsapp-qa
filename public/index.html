@@ -902,12 +902,210 @@
                 transform: translateY(0);
             }
         }
+
+        /* ================== MOBILE RESPONSIVE ================== */
+
+        /* Hamburger Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 200;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--accent);
+        }
+
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 90;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        /* Mobile Audio Fix */
+        audio {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 8px;
+            background: var(--bg-glass);
+        }
+
+        /* Tablet Breakpoint */
+        @media (max-width: 1024px) {
+            .main {
+                padding: 24px 24px;
+            }
+
+            .search-hero h1 {
+                font-size: 1.5em;
+            }
+        }
+
+        /* Mobile Breakpoint */
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 80px 16px 24px 16px;
+            }
+
+            .search-hero h1 {
+                font-size: 1.3em;
+            }
+
+            .search-hero p {
+                font-size: 0.9em;
+            }
+
+            .search-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .search-box {
+                font-size: 16px;
+                /* Prevents zoom on iOS */
+                padding: 14px 16px;
+            }
+
+            .search-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .quick-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .quick-btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+
+            .result-card {
+                padding: 16px;
+            }
+
+            .result-question {
+                font-size: 14px;
+            }
+
+            .result-answer {
+                font-size: 13px;
+            }
+
+            .admin-controls {
+                flex-direction: column;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .admin-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 10px;
+            }
+
+            .result-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            /* Modal Mobile */
+            .modal {
+                width: 95%;
+                max-height: 90vh;
+                margin: 20px;
+            }
+
+            .modal-body {
+                padding: 16px;
+            }
+
+            /* Audio Mobile Optimization */
+            .modal-audio audio,
+            audio {
+                width: 100%;
+                height: 54px;
+            }
+
+            /* Stats card on mobile */
+            .stats-card {
+                padding: 12px;
+            }
+
+            .stats-title {
+                font-size: 10px;
+            }
+
+            .stat-row {
+                font-size: 12px;
+            }
+
+            /* Logo on mobile */
+            .logo-text {
+                font-size: 16px;
+            }
+        }
+
+        /* Small Mobile */
+        @media (max-width: 480px) {
+            .main {
+                padding: 70px 12px 20px 12px;
+            }
+
+            .search-hero h1 {
+                font-size: 1.1em;
+            }
+
+            .quick-btn {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="app">
-        <aside class="sidebar">
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <img src="/images/rav_abichid.png" alt="Rav Abichid" class="logo-img">
                 <div class="logo-text">Questions Réponses du Rav Abichid</div>
@@ -1060,7 +1258,7 @@
                     </div>
                     <div class="modal-audio" id="modalAudioSection" style="display:none;">
                         <div class="modal-label">🎵 Audio</div>
-                        <audio controls id="modalAudioPlayer"></audio>
+                        <audio controls preload="metadata" playsinline id="modalAudioPlayer"></audio>
                     </div>
                     <div class="modal-meta" id="modalMeta"></div>
                 </div>
@@ -1122,6 +1320,31 @@
                     </p>
                     <div id="candidatesList" style="max-height: 400px; overflow-y: auto;">
                         <div class="empty-state">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Delete Modal -->
+        <div class="modal-overlay" id="confirmDeleteOverlay">
+            <div class="modal" style="max-width: 400px; text-align: center;">
+                <div class="modal-header">
+                    <div class="modal-title">🗑️ Confirmer la suppression</div>
+                    <div class="modal-close" onclick="cancelDelete()">×</div>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size: 16px; margin-bottom: 20px; color: var(--text-primary);">
+                        Voulez-vous vraiment supprimer ce message ?
+                    </p>
+                    <div style="display: flex; gap: 16px; justify-content: center;">
+                        <button onclick="cancelDelete()"
+                            style="padding: 12px 24px; background: var(--bg-glass); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-size: 14px;">
+                            ❌ Annuler
+                        </button>
+                        <button onclick="confirmDelete()"
+                            style="padding: 12px 24px; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            🗑️ Supprimer
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1328,7 +1551,7 @@
                         openModal(s);
                     });
 
-                    let audioHtml = s.hasAudio && s.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls src="${s.audioUrl}"></audio></div>` : '';
+                    let audioHtml = s.hasAudio && s.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls preload="metadata" playsinline src="${s.audioUrl}"></audio></div>` : '';
                     div.innerHTML = `
                         <div class="result-question" style="font-size: 15px;">[Source ${s.index}] ${s.question}</div>
                         <div class="result-answer" style="font-size: 13px;">${s.answer}</div>
@@ -1361,7 +1584,7 @@
                     openModal(item);
                 });
 
-                let audioHtml = item.hasAudio && item.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls src="${item.audioUrl}"></audio></div>` : '';
+                let audioHtml = item.hasAudio && item.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls preload="metadata" playsinline src="${item.audioUrl}"></audio></div>` : '';
                 div.innerHTML = `
                     <div class="result-question">${item.question || 'Question sans texte'}</div>
                     <div class="result-answer">${(item.answer || '').substring(0, 300)}...</div>
@@ -1608,6 +1831,32 @@
         setTheme(localStorage.getItem('theme') || 'dark');
 
         // --- INIT ---
+
+        // Mobile Menu Toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function toggleMobileMenu() {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('active');
+            mobileMenuBtn.textContent = sidebar.classList.contains('open') ? '✕' : '☰';
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+        sidebarOverlay.addEventListener('click', toggleMobileMenu);
+
+        // Close menu on nav click (mobile)
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('active');
+                    mobileMenuBtn.textContent = '☰';
+                }
+            });
+        });
+
         loadStats();
         loadRecentMessages();
 
