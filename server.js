@@ -125,6 +125,25 @@ function getDB() {
     return new Database(DB_PATH);
 }
 
+// Helper: Get audio URL preferring MP3 over OGG for iOS compatibility
+function getAudioUrl(audioPath) {
+    if (!audioPath) return null;
+
+    const basename = path.basename(audioPath);
+
+    // If it's an OGG file, check if MP3 version exists
+    if (basename.endsWith('.ogg')) {
+        const mp3Name = basename.replace('.ogg', '.mp3');
+        const mp3Path = path.join(__dirname, 'media', mp3Name);
+
+        if (fs.existsSync(mp3Path)) {
+            return `/audio/${mp3Name}`;
+        }
+    }
+
+    return `/audio/${basename}`;
+}
+
 // =============================================================================
 // API ENDPOINTS - Core
 // =============================================================================
@@ -208,7 +227,7 @@ app.get('/api/search', async (req, res) => {
             question: r.question_text || '',
             answer: r.transcript_torah || '',
             hasAudio: !!r.audio_path,
-            audioUrl: r.audio_path ? `/audio/${path.basename(r.audio_path)}` : null,
+            audioUrl: getAudioUrl(r.audio_path),
             date: r.ts ? new Date(r.ts * 1000).toISOString() : null
         })),
         total: results.length
@@ -246,7 +265,7 @@ app.get('/api/messages', (req, res) => {
             question: r.question_text || '',
             answer: r.transcript_torah || '',
             hasAudio: !!r.audio_path,
-            audioUrl: r.audio_path ? `/audio/${path.basename(r.audio_path)}` : null,
+            audioUrl: getAudioUrl(r.audio_path),
             date: r.ts ? new Date(r.ts * 1000).toISOString() : null,
             group: r.group_name || '',
             sender: r.sender_name || ''
@@ -273,7 +292,7 @@ app.get('/api/messages/:id', (req, res) => {
         answer: msg.transcript_torah || msg.transcript_raw || '',
         rawAnswer: msg.transcript_raw || '',
         hasAudio: !!msg.audio_path,
-        audioUrl: msg.audio_path ? `/audio/${path.basename(msg.audio_path)}` : null,
+        audioUrl: getAudioUrl(msg.audio_path),
         date: msg.ts ? new Date(msg.ts * 1000).toISOString() : null,
         group: msg.group_name || '',
         sender: msg.sender_name || ''

@@ -1293,6 +1293,22 @@
                         <audio controls preload="metadata" playsinline id="modalAudioPlayer"></audio>
                     </div>
                     <div class="modal-meta" id="modalMeta"></div>
+
+                    <!-- Share Section -->
+                    <div class="share-section"
+                        style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+                        <div class="modal-label">📤 Partager</div>
+                        <div class="share-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                            <button class="share-btn whatsapp" onclick="shareOnWhatsApp()"
+                                style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-glass); color: var(--text-secondary); cursor: pointer; transition: all 0.2s;">
+                                <span style="font-size: 18px;">📱</span> WhatsApp
+                            </button>
+                            <button class="share-btn copy" onclick="copyToClipboard()"
+                                style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-glass); color: var(--text-secondary); cursor: pointer; transition: all 0.2s;">
+                                <span style="font-size: 18px;">📋</span> Copier
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1492,6 +1508,61 @@
                 modalAudioPlayer.pause();
             }
         });
+
+        // --- SHARE FUNCTIONS ---
+        function shareOnWhatsApp() {
+            if (!currentDetailItem) return;
+
+            const question = currentDetailItem.question || 'Question';
+            const answer = currentDetailItem.answer || 'Pas de réponse';
+            const audioUrl = currentDetailItem.audioUrl ?
+                `${window.location.origin}${currentDetailItem.audioUrl}` : null;
+
+            let message = `📖 *Question au Rav Abichid*\n\n`;
+            message += `❓ *Question:*\n${question}\n\n`;
+            message += `💬 *Réponse:*\n${answer.substring(0, 500)}${answer.length > 500 ? '...' : ''}\n\n`;
+
+            if (audioUrl) {
+                message += `🎧 *Écouter l'audio:*\n${audioUrl}\n\n`;
+            }
+
+            message += `📱 Plus de questions sur: ${window.location.origin}`;
+
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function copyToClipboard() {
+            if (!currentDetailItem) return;
+
+            const question = currentDetailItem.question || 'Question';
+            const answer = currentDetailItem.answer || 'Pas de réponse';
+            const audioUrl = currentDetailItem.audioUrl ?
+                `${window.location.origin}${currentDetailItem.audioUrl}` : null;
+
+            let text = `📖 Question au Rav Abichid\n\n`;
+            text += `❓ Question:\n${question}\n\n`;
+            text += `💬 Réponse:\n${answer}\n\n`;
+
+            if (audioUrl) {
+                text += `🎧 Audio: ${audioUrl}\n\n`;
+            }
+
+            text += `📱 Plus de questions sur: ${window.location.origin}`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Copié dans le presse-papiers !');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ Copié dans le presse-papiers !');
+            });
+        }
 
         // --- RENDER FUNCTIONS ---
 
