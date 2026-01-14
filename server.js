@@ -158,8 +158,35 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         timestamp: new Date().toISOString(),
         messages: stats.total,
-        uptime: Math.floor(process.uptime())
+        uptime: process.uptime()
     });
+});
+
+// Debug endpoint to check media files
+app.get('/api/debug/media', (req, res) => {
+    const mediaDir = path.join(__dirname, 'media');
+    try {
+        if (!fs.existsSync(mediaDir)) {
+            return res.json({ error: 'Media directory not found', path: mediaDir });
+        }
+        const files = fs.readdirSync(mediaDir);
+        const mp3Count = files.filter(f => f.endsWith('.mp3')).length;
+        const oggCount = files.filter(f => f.endsWith('.ogg')).length;
+        const sampleFiles = files.slice(0, 10).map(f => ({
+            name: f,
+            size: fs.statSync(path.join(mediaDir, f)).size
+        }));
+
+        res.json({
+            totalFiles: files.length,
+            mp3Count,
+            oggCount,
+            mediaPath: mediaDir,
+            samples: sampleFiles
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message, stack: error.stack });
+    }
 });
 
 // Stats globales
@@ -618,33 +645,6 @@ app.use((err, req, res, next) => {
         error: message,
         timestamp: new Date().toISOString()
     });
-});
-
-// Debug endpoint to check media files
-app.get('/api/debug/media', (req, res) => {
-    const mediaDir = path.join(__dirname, 'media');
-    try {
-        if (!fs.existsSync(mediaDir)) {
-            return res.json({ error: 'Media directory not found', path: mediaDir });
-        }
-        const files = fs.readdirSync(mediaDir);
-        const mp3Count = files.filter(f => f.endsWith('.mp3')).length;
-        const oggCount = files.filter(f => f.endsWith('.ogg')).length;
-        const sampleFiles = files.slice(0, 10).map(f => ({
-            name: f,
-            size: fs.statSync(path.join(mediaDir, f)).size
-        }));
-
-        res.json({
-            totalFiles: files.length,
-            mp3Count,
-            oggCount,
-            mediaPath: mediaDir,
-            samples: sampleFiles
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message, stack: error.stack });
-    }
 });
 
 app.listen(PORT, () => {
