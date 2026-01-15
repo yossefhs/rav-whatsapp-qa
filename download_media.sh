@@ -76,6 +76,6 @@ fi
 
 # Unzip (unzip is installed via Dockerfile)
 echo "📦 Extracting media files..."
-unzip -o "$FINAL_FILE" -d "$MEDIA_DIR" > /dev/null
+unzip -o -j "$FINAL_FILE" -d "$MEDIA_DIR" > /dev/null
 rm "$FINAL_FILE"
 echo "✅ Media files extracted successfully"
