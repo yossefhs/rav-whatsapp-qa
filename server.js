@@ -130,18 +130,42 @@ function getAudioUrl(audioPath) {
     if (!audioPath) return null;
 
     const basename = path.basename(audioPath);
+    const mediaDir = path.join(__dirname, 'media');
 
-    // If it's an OGG file, check if MP3 version exists
-    if (basename.endsWith('.ogg')) {
-        const mp3Name = basename.replace('.ogg', '.mp3');
-        const mp3Path = path.join(__dirname, 'media', mp3Name);
+    // 1. Check exact match (or OGG)
+    if (fs.existsSync(path.join(mediaDir, basename))) {
+        return `/audio/${basename}`;
+    }
 
-        if (fs.existsSync(mp3Path)) {
-            return `/audio/${mp3Name}`;
+    // 2. Check MP3 version of the exact name
+    const mp3Name = basename.replace(/\.(ogg|opus)$/i, '.mp3');
+    if (fs.existsSync(path.join(mediaDir, mp3Name))) {
+        return `/audio/${mp3Name}`;
+    }
+
+    // 3. Loose match: Try to find by unique suffix (often the ID part)
+    // DB Format: false_972546314770-1488386952@g.us_3A03A0FDE1CAF2E28388_192491911393282@lid.ogg
+    // Target: 3A03A0FDE1CAF2E28388.mp3 or similar
+
+    // Extract the "ID" part. Usually between the last underscore and the extension, OR a long hex string.
+    // Attempt A: Extract last segment after underscore (excluding @lid stuff if present)
+    // Actually, many recovered files are just "ID.mp3" or "YYYY-MM-DD-AUDIO-....mp3".
+
+    // Let's look for files that *contain* parts of the basename.
+    // This is expensive if we do readdir every time, but for now it's necessary.
+    // Optimization: We could cache the file list.
+
+    // Simple heuristic: If the file has a long hex string, look for that.
+    const hexMatch = basename.match(/[A-F0-9]{18,}/);
+    if (hexMatch) {
+        const idPart = hexMatch[0];
+        const potentialMatch = idPart + '.mp3';
+        if (fs.existsSync(path.join(mediaDir, potentialMatch))) {
+            return `/audio/${potentialMatch}`;
         }
     }
 
-    return `/audio/${basename}`;
+    return `/audio/${basename}`; // Return original as fallback (client might get 404 but we tried)
 }
 
 // =============================================================================
