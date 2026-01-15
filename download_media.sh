@@ -51,8 +51,8 @@ if grep -q "Virus scan warning" "$TEMP_FILE"; then
             FULL_URL="${ACTION}?id=${FILE_ID}&export=download&confirm=${CONFIRM}&uuid=${UUID}"
         fi
         
-        echo "   2. Downloading binary..."
-        curl -b "$COOKIE_FILE" "$FULL_URL" -o "$FINAL_FILE"
+        echo "   2. Downloading binary (large file)..."
+        curl -L --retry 3 --retry-delay 5 --connect-timeout 60 --max-time 1800 -b "$COOKIE_FILE" "$FULL_URL" -o "$FINAL_FILE"
     else
         echo "❌ Failed to scrape parameters from warning page."
         cat "$TEMP_FILE"
@@ -64,11 +64,13 @@ else
 fi
 
 echo "   3. Verifying download..."
-# Check size > 1MB (Audio zip is ~150MB)
+# Check size > 100MB (Audio zip is ~6.8GB)
 FILESIZE=$(stat -c%s "$FINAL_FILE" 2>/dev/null || stat -f%z "$FINAL_FILE")
-if [ "$FILESIZE" -lt 1000000 ]; then
-    echo "❌ Downloaded file is too small ($FILESIZE bytes). It might be an error page."
+if [ "$FILESIZE" -lt 100000000 ]; then
+    echo "❌ Downloaded file is too small ($FILESIZE bytes). It must be > 100MB."
+    # If it's small, it might be an error page
     head -n 20 "$FINAL_FILE"
+    rm "$FINAL_FILE"
     exit 1
 fi
 
