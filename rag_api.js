@@ -8,6 +8,7 @@ const { applyGuardrails, calculateConfidence, filterQuery } = require('./guardra
 const OpenAI = require('openai');
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 const DB_PATH = process.env.DB_PATH || './ravqa.db';
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
@@ -23,8 +24,7 @@ try {
 } catch (e) {
     console.error('❌ OpenAI init error:', e.message);
 }
-// Database is instantiated per request or cached? Better to instantiate once here if serverless isn't an issue.
-// For this continuous server architecture, one instance is fine.
+
 // Cache des vecteurs en mémoire
 let vectorsCache = null;
 let lastCacheUpdate = 0;
@@ -141,13 +141,12 @@ async function searchLocal(query, limit = 10) {
 }
 
 // Helper to get correct Audio URL (MP3 preferred)
-const fs = require('fs'); // Ensure fs is required
 function getAudioUrl(audioPath) {
     if (!audioPath) return null;
     const basename = path.basename(audioPath);
-    const mediaDir = path.join(__dirname, 'media'); // Assumes rag_api.js is in root alongside media/
+    const mediaDir = path.join(__dirname, 'media');
 
-    // 1. Check exact match (or OGG if that's what's asked)
+    // 1. Check exact match
     if (fs.existsSync(path.join(mediaDir, basename))) {
         return `/audio/${basename}`;
     }
@@ -158,8 +157,7 @@ function getAudioUrl(audioPath) {
         return `/audio/${mp3Name}`;
     }
 
-    // 3. Fallback: Lookup by ID in loose file matching (Optional but good)
-    // For now, MP3 switch is the main fix for mobile.
+    // 3. Fallback
     return `/audio/${basename}`;
 }
 
@@ -167,88 +165,49 @@ function getAudioUrl(audioPath) {
  * Recherche RAG sécurisée avec garde-fous
  */
 async function secureRAGSearch(query, options = {}) {
-    // ... (rest of the logic remains same, but we will inject a better prompt in a hypothetical 'generateAnswer' function or similar? 
-    // Wait, secureRAGSearch calls searchLocal and applyGuardrails. 
-    // The current file doesn't seem to have the 'answer generation' part (OpenAI ChatCompletion).
-    // Ah, 'searchLocal' returns results, and 'secureRAGSearch' returns them.
-    // The user's request is "precision des reponse".
-    // If this API *only* returns search results (not a generated summary), then "precision" means "better ranking".
+    const startTime = Date.now();
+    const limit = options.limit || 5;
+    const includeDetails = options.includeDetails !== false;
 
-    // Let's look at `searchLocal` again. It uses cosine similarity.
-    // Without Qdrant, we depend on `loadVectors`.
-
-    // To improve precision WITHOUT Qdrant (since Docker is down):
-    // 1. We can filter results more aggressively in `searchLocal`.
-    // 2. We can re-rank based on keyword overlap (Hybrid Search simulation).
-
-    // We already added 'Thematic Score' in `guardrails.js`.
-
-    // Actually, `rag_api.js` does NOT generate an answer. It returns `guardedResult`.
-    // The Client (Frontend) likely uses these chunks to generate an answer, OR there is another endpoint for generation.
-    // Let's check `rag_api.js` lines 192+. It returns `res.json(result)`.
-
-    // I need to find where the AI *generates* the answer text if the user implies "precision des mots de la réponse".
-    // OR if they mean "precision des résultats trouvés".
-
-    // Assuming "precision des résultats":
-    // I will boost the 'Thematic' weight in `guardrails.js` (WEIGHTS).
-
-    return await originalSecureRAGLogic(query, options);
-}
-
-// Re-implementing secureRAGSearch to be sure I don't break it, but actually I should edit `guardrails.js` to change weights.
-// The user also asked for "liaison des questions réponses".
-// The `link_orphans.js` script handles the data layer.
-// To expose this better, I should ensure `searchLocal` returns the LINKED question if available.
-// In `loadVectors`, we Select `m.question_text`. If `link_orphans` runs, this field will be populated!
-// So just running `link_orphans` improves the RAG data source immediately.
-
-// I will Focus on `guardrails.js` to tune the weights for better precision.
-const startTime = Date.now();
-const limit = options.limit || 5;
-const includeDetails = options.includeDetails !== false;
-
-// 1. Validation entrée
-const queryValidation = filterQuery(query);
-if (!queryValidation.valid) {
-    return {
-        success: false,
-        error: queryValidation.reason,
-        results: [],
-        stats: { duration: Date.now() - startTime }
-    };
-}
-
-// 2. Recherche Locale (Updated logic to be smarter?)
-// We can boost keywords here before cosine check?
-// Actually `searchLocal` does the heavy lifting.
-const rawResults = await searchLocal(queryValidation.cleaned, limit * 3); // Get more candidates for re-ranking
-
-// 3. Application garde-fous
-const guardedResult = await applyGuardrails(query, rawResults);
-
-// 4. Construire réponse
-return {
-    success: guardedResult.success,
-    query: {
-        original: query,
-        cleaned: queryValidation.cleaned,
-        isHalakhic: queryValidation.isHalakhic
-    },
-    results: guardedResult.results.slice(0, limit).map(r => ({
-        id: r.id,
-        question: r.question,
-        answer: includeDetails ? r.answer : r.answer.substring(0, 200) + '...',
-        confidence: r.confidence,
-        audio_url: getAudioUrl(r.audio_path)
-    })),
-    stats: {
-        duration: Date.now() - startTime,
-        total_found: rawResults.length,
-        validated: guardedResult.stats?.validated || 0,
-        rejected: guardedResult.stats?.rejected || 0
+    // 1. Validation entrée
+    const queryValidation = filterQuery(query);
+    if (!queryValidation.valid) {
+        return {
+            success: false,
+            error: queryValidation.reason,
+            results: [],
+            stats: { duration: Date.now() - startTime }
+        };
     }
-};
+
+    // 2. Recherche Locale
+    const rawResults = await searchLocal(queryValidation.cleaned, limit * 3);
+
+    // 3. Application garde-fous
+    const guardedResult = await applyGuardrails(query, rawResults);
+
+    // 4. Construire réponse
+    return {
+        success: guardedResult.success,
+        query: {
+            original: query,
+            cleaned: queryValidation.cleaned,
+            isHalakhic: queryValidation.isHalakhic
+        },
+        results: guardedResult.results.slice(0, limit).map(r => ({
+            id: r.id,
+            question: r.question,
+            answer: includeDetails ? r.answer : r.answer.substring(0, 200) + '...',
+            confidence: r.confidence,
+            audio_url: getAudioUrl(r.audio_path)
+        })),
+        stats: {
+            duration: Date.now() - startTime,
+            total_found: rawResults.length,
+            validated: guardedResult.stats?.validated || 0,
+            rejected: guardedResult.stats?.rejected || 0
+        }
+    };
 }
 
 function setupRAGEndpoints(app) {
@@ -293,8 +252,6 @@ function setupRAGEndpoints(app) {
     console.log('✅ RAG endpoints registered (Mode: Local SQLite)');
 }
 
-// ... (existing code)
-
 function invalidateCache() {
     vectorsCache = null;
     lastCacheUpdate = 0;
@@ -306,5 +263,5 @@ module.exports = {
     searchLocal,
     getEmbedding,
     setupRAGEndpoints,
-    invalidateCache // Exported
+    invalidateCache
 };
