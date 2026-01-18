@@ -571,65 +571,11 @@ app.get('/api/upload/status', (req, res) => {
 });
 
 // =============================================================================
-// API ENDPOINTS - Feedback / Validation
+// API ENDPOINTS - Feedback / Validation (Robust System)
 // =============================================================================
 
-app.post('/api/feedback', express.json(), (req, res) => {
-    const { messageId, isValid, timestamp } = req.body;
-
-    if (!messageId) {
-        return res.status(400).json({ error: 'messageId requis' });
-    }
-
-    try {
-        const db = new Database(DB_PATH);
-
-        // Créer la table si elle n'existe pas
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS feedback (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                message_id INTEGER,
-                is_valid BOOLEAN,
-                created_at TEXT,
-                FOREIGN KEY (message_id) REFERENCES messages(id)
-            )
-        `);
-
-        // Insérer le feedback
-        db.prepare(`
-            INSERT INTO feedback (message_id, is_valid, created_at)
-            VALUES (?, ?, ?)
-        `).run(messageId, isValid ? 1 : 0, timestamp || new Date().toISOString());
-
-        db.close();
-
-        console.log(`✅ Feedback: message ${messageId} - ${isValid ? '👍' : '👎'}`);
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Erreur feedback:', error);
-        res.status(500).json({ error: 'Erreur enregistrement feedback' });
-    }
-});
-
-// Stats feedback
-app.get('/api/feedback/stats', (req, res) => {
-    try {
-        const db = new Database(DB_PATH);
-        const stats = db.prepare(`
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN is_valid = 1 THEN 1 ELSE 0 END) as valid,
-                SUM(CASE WHEN is_valid = 0 THEN 1 ELSE 0 END) as invalid
-            FROM feedback
-        `).get();
-        db.close();
-
-        res.json(stats || { total: 0, valid: 0, invalid: 0 });
-    } catch (error) {
-        res.json({ total: 0, valid: 0, invalid: 0 });
-    }
-});
+const { setupFeedbackEndpoints } = require('./feedback_system');
+setupFeedbackEndpoints(app, invalidateCache);
 
 // =============================================================================
 // RAG SEMANTIC SEARCH (Qdrant + OpenAI Embeddings)
