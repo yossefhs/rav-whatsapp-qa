@@ -1656,18 +1656,61 @@
 
                     let audioHtml = s.hasAudio && s.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls preload="metadata" playsinline src="${s.audioUrl}"></audio></div>` : '';
                     div.innerHTML = `
-                        <div class="result-question" style="font-size: 15px;">[Source ${s.index}] ${s.question}</div>
+                <div class="result-question" style="font-size: 15px;">[Source ${s.index}] ${s.question}</div>
                         <div class="result-answer" style="font-size: 13px;">${s.answer}</div>
                         ${audioHtml}
                          <div class="result-meta">
                             <span>📅 ${s.date || 'Date inconnue'} • Similarité: ${s.similarity}%</span>
                             <div class="admin-controls">
-                                <button class="admin-btn edit" onclick="window.openEditModal('${s.id}')">✏️ Corriger</button>
+                                <button class="admin-btn edit" onclick="window.openEditModal('${s.id}')" title="Corriger le texte">✏️ Corriger</button>
+                                <button class="admin-btn delete" onclick="invalidateSource(this, '${s.id}')" title="Retirer cette source de la liste (Feedback)">❌ Retirer</button>
                             </div>
                         </div>
                     `;
                     resultsDiv.appendChild(div);
                 });
+            }
+        }
+
+        async function invalidateSource(btnElement, id) {
+            // Empêcher le clic sur la carte parent
+            if (event) event.stopPropagation();
+
+            if (!confirm("Retirer cette source ?\nCela indiquera à l'IA qu'elle n'est pas pertinente pour cette question.")) return;
+
+            const card = btnElement.closest('.result-card');
+            const query = searchInput.value;
+
+            try {
+                // 1. Envoyer le feedback négatif
+                await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messageId: id,
+                        query: query,
+                        isRelevant: false,
+                        comment: "Retiré manuellement par l'utilisateur via 'Retirer'"
+                    })
+                });
+
+                // 2. Animation de suppression
+                card.style.transition = "all 0.5s ease";
+                card.style.opacity = "0";
+                card.style.transform = "translateX(50px)";
+
+                setTimeout(() => {
+                    card.remove();
+                    // Check if any sources remain
+                    const remaining = document.querySelectorAll('#results .result-card').length;
+                    if (remaining <= 1) { // 1 because the AI response card is usually first
+                        // Maybe show a toast
+                    }
+                }, 500);
+
+            } catch (e) {
+                console.error(e);
+                alert("Erreur lors du signalement");
             }
         }
 
