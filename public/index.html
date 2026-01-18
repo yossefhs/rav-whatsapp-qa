@@ -1660,7 +1660,12 @@
                         openModal(s);
                     });
 
-                    let audioHtml = s.hasAudio && s.audioUrl ? `<div class="modal-audio" style="margin-top:10px;"><audio controls preload="metadata" playsinline src="${s.audioUrl}"></audio></div>` : '';
+                    let audioHtml = s.hasAudio && s.audioUrl ?
+                        `<div class="modal-audio" style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+                            <audio controls preload="metadata" playsinline src="${s.audioUrl}" style="flex:1;"></audio>
+                            <button class="icon-btn" onclick="shareAudio('${s.audioUrl}', '${s.question.replace(/'/g, "\\'")}')" title="Partager l'audio sur WhatsApp">🔗</button>
+                         </div>` : '';
+
                     div.innerHTML = `
                 <div class="result-question" style="font-size: 15px;">[Source ${s.index}] ${s.question}</div>
                         <div class="result-answer" style="font-size: 13px;">${s.answer}</div>
@@ -1676,6 +1681,38 @@
                     resultsDiv.appendChild(div);
                 });
             }
+        }
+
+        async function shareAudio(url, title) {
+            if (event) event.stopPropagation();
+
+            // Construct absolute URL
+            const absoluteUrl = window.location.origin + url;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Réponse Rav Abichid',
+                        text: title,
+                        url: absoluteUrl
+                    });
+                    console.log('Shared successfully');
+                } catch (err) {
+                    console.error('Share failed:', err);
+                    copyToClipboard(absoluteUrl);
+                }
+            } else {
+                copyToClipboard(absoluteUrl);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Lien audio copié !');
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+                prompt("Copiez le lien :", text);
+            });
         }
 
         async function invalidateSource(btnElement, id) {
