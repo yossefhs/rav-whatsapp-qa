@@ -109,16 +109,15 @@ const upload = multer({
 const app = express();
 const { initBot } = require('./bot');
 
-// Lancement du Bot (Delayed & Conditional)
-// IMPORTANT: Default is DISABLED to prevent OOM on generic hosting (Railway Starter).
-// To enable: set ENABLE_WHATSAPP_BOT=true in environment variables.
-if (process.env.ENABLE_WHATSAPP_BOT === 'true') {
+// Lancement du Bot (Delayed to allow server startup)
+// We delay bot startup by 20s to ensure Railway Health Checks pass first.
+if (process.env.DISABLE_BOT !== 'true') {
     setTimeout(() => {
-        console.log('⏳ Starting Bot after delay...');
+        console.log('⏳ Starting Bot after delay (20s)...');
         initBot().catch(err => console.error('❌ Bot Init Error:', err));
-    }, 15000);
+    }, 20000);
 } else {
-    console.log('🛑 Bot is disabled by default (Memory Safety). Set ENABLE_WHATSAPP_BOT=true to enable.');
+    console.log('🛑 Bot disabled by configuration');
 }
 
 app.use(express.json());
