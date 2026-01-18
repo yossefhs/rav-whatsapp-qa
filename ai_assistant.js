@@ -149,6 +149,43 @@ La réponse doit être claire, concise et basée uniquement sur les sources four
 }
 
 /**
+ * Analyse et reformule la question pour optimiser la recherche vectorielle
+ * (Query Expansion / HyDE Lite)
+ */
+async function analyzeAndRefineQuery(question) {
+    if (!openai) return question;
+
+    try {
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: `Tu es un expert en recherche sémantique de Halakha.
+Ta mission : Reformuler la question de l'utilisateur pour maximiser la pertinence de la recherche dans une base de données de questions-réponses.
+1. Corrige les fautes d'orthographe.
+2. Explicite les termes implicites (ex: "lait viande" -> "mélange lait et viande basar behalav").
+3. Ajoute 2-3 mots-clés techniques hébreux pertinents si applicables (ex: Muktze, Borrer, Se'hita).
+4. La phrase doit être une question complète et bien formulée.
+
+Retourne UNIQUEMENT la nouvelle question reformulée, sans guillemets ni intro.`
+                },
+                { role: 'user', content: question }
+            ],
+            temperature: 0.3,
+            max_tokens: 100
+        });
+
+        const refinedQuery = completion.choices[0].message.content.trim();
+        console.log(`🔍 Query Refined: "${question}" -> "${refinedQuery}"`);
+        return refinedQuery;
+    } catch (error) {
+        console.error('Query refinement error:', error);
+        return question; // Fallback to original
+    }
+}
+
+/**
  * Fonction principale: Poser une question à l'assistant
  */
 async function askAssistant(question, options = {}) {
@@ -157,8 +194,11 @@ async function askAssistant(question, options = {}) {
     // FORCE LIMIT TO 3 to ensure synchronization with UI
     const limit = 3;
 
-    // 1. Rechercher les Q&A similaires
-    const sources = await searchSimilarQA(question, limit);
+    // 0. (NOUVEAU) Refiner la question avec GPT pour mieux chercher
+    const refinedQuery = await analyzeAndRefineQuery(question);
+
+    // 1. Rechercher les Q&A similaires en utilisant la question optimisée
+    const sources = await searchSimilarQA(refinedQuery, limit);
 
     if (sources.length === 0) {
         return {
