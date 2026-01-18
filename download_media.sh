@@ -67,11 +67,13 @@ echo "   3. Verifying download..."
 # Check size > 100MB (Audio zip is ~6.8GB)
 FILESIZE=$(stat -c%s "$FINAL_FILE" 2>/dev/null || stat -f%z "$FINAL_FILE")
 if [ "$FILESIZE" -lt 100000000 ]; then
-    echo "❌ Downloaded file is too small ($FILESIZE bytes). It must be > 100MB."
-    # If it's small, it might be an error page
+    echo "⚠️ Warning: Downloaded file is too small ($FILESIZE bytes). Google Drive Quota might be exceeded."
+    echo "⚠️ Proceeding without new media files to ensure server startup."
+    # Log the error page for debug
     head -n 20 "$FINAL_FILE"
     rm "$FINAL_FILE"
-    exit 1
+    # DO NOT FAIL. Exit 0 to allow server to start.
+    exit 0
 fi
 
 # Unzip (unzip is installed via Dockerfile)
