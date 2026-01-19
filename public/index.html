@@ -1683,11 +1683,18 @@
             }
         }
 
+        // URL de Production (Railway)
+        const PRODUCTION_URL = "https://rav-whatsapp-qa.up.railway.app";
+
         async function shareAudio(url, title) {
             if (event) event.stopPropagation();
 
-            // Construct absolute URL
-            const absoluteUrl = window.location.origin + url;
+            // Déterminer la base URL
+            // Si on est sur localhost, on force l'URL de production pour le partage
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const baseUrl = isLocal ? PRODUCTION_URL : window.location.origin;
+
+            const absoluteUrl = baseUrl + url;
 
             if (navigator.share) {
                 try {
