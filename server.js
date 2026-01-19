@@ -94,15 +94,29 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-    storage,
+    storage: storage,
     limits: { fileSize: 2500 * 1024 * 1024 }, // 2.5GB max
     fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'application/zip' || file.originalname.endsWith('.zip')) {
+        if (file.mimetype === 'application/zip' ||
+            file.originalname.endsWith('.zip') ||
+            file.originalname.endsWith('.mp3') ||
+            file.originalname.endsWith('.ogg')) {
             cb(null, true);
         } else {
-            cb(new Error('Seuls les fichiers ZIP sont acceptés'));
+            cb(new Error('Seuls ZIP, MP3, OGG acceptés'));
         }
     }
+});
+
+// Admin Upload Endpoint (For Migration)
+// curl -X POST -F "file=@audio.mp3" http://host/api/admin/upload?secret=MIGRATION_KEY
+app.post('/api/admin/upload', upload.single('file'), (req, res) => {
+    if (req.query.secret !== process.env.ADMIN_SECRET && req.query.secret !== 'MIGRATION_2026') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    console.log(`✅ Admin Upload: ${req.file.originalname}`);
+    res.json({ success: true, filename: req.file.originalname });
 });
 
 // Initialisation
