@@ -94,45 +94,26 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-    storage: storage,
+    storage,
     limits: { fileSize: 2500 * 1024 * 1024 }, // 2.5GB max
     fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'application/zip' ||
-            file.originalname.endsWith('.zip') ||
-            file.originalname.endsWith('.mp3') ||
-            file.originalname.endsWith('.ogg')) {
+        if (file.mimetype === 'application/zip' || file.originalname.endsWith('.zip')) {
             cb(null, true);
         } else {
-            cb(new Error('Seuls ZIP, MP3, OGG acceptés'));
+            cb(new Error('Seuls les fichiers ZIP sont acceptés'));
         }
     }
-});
-
-// Admin Upload Endpoint (For Migration)
-// curl -X POST -F "file=@audio.mp3" http://host/api/admin/upload?secret=MIGRATION_KEY
-app.post('/api/admin/upload', upload.single('file'), (req, res) => {
-    if (req.query.secret !== process.env.ADMIN_SECRET && req.query.secret !== 'MIGRATION_2026') {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-    if (!req.file) return res.status(400).json({ error: 'No file' });
-    console.log(`✅ Admin Upload: ${req.file.originalname}`);
-    res.json({ success: true, filename: req.file.originalname });
 });
 
 // Initialisation
 const app = express();
 const { initBot } = require('./bot');
 
-// Lancement du Bot (Delayed & Conditional)
-// IMPORTANT: Default is DISABLED to prevent OOM on generic hosting (Railway Starter).
-// To enable: set ENABLE_WHATSAPP_BOT=true in environment variables.
-if (process.env.ENABLE_WHATSAPP_BOT === 'true') {
-    setTimeout(() => {
-        console.log('⏳ Starting Bot after delay...');
-        initBot().catch(err => console.error('❌ Bot Init Error:', err));
-    }, 20000);
+// Lancement du Bot (Uniquement si activé)
+if (process.env.ENABLE_BOT === 'true') {
+    initBot().catch(err => console.error('❌ Bot Init Error:', err));
 } else {
-    console.log('🛑 Bot is disabled by default (Memory Safety). Set ENABLE_WHATSAPP_BOT=true to enable.');
+    console.log('ℹ️ Bot désactivé (ENABLE_BOT != true)');
 }
 
 app.use(express.json());
