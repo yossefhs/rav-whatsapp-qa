@@ -107,13 +107,12 @@ const upload = multer({
 
 // Initialisation
 const app = express();
-const { initBot } = require('./bot');
-
 // Lancement du Bot (Uniquement si activé)
 if (process.env.ENABLE_BOT === 'true') {
+    const { initBot } = require('./bot');
     initBot().catch(err => console.error('❌ Bot Init Error:', err));
 } else {
-    console.log('ℹ️ Bot désactivé (ENABLE_BOT != true)');
+    console.log('ℹ️ Bot désactivé (ENABLE_BOT != true) - Mode API/Web uniquement');
 }
 
 app.use(express.json());
