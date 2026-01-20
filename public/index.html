@@ -1905,24 +1905,40 @@
 
         async function saveEdit() {
             try {
-                await fetch(`/api/messages/${editIdInput.value}`, {
-                    method: 'PUT',
+                // Change to Suggestion Flow
+                const res = await fetch('/api/suggestions', {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: editQuestionInputs.value, answer: editAnswerInputs.value })
+                    body: JSON.stringify({
+                        message_id: editIdInput.value,
+                        type: 'edit',
+                        payload: { question: editQuestionInputs.value, answer: editAnswerInputs.value }
+                    })
                 });
+
+                if (!res.ok) throw new Error('Erreur');
+
                 closeEditModal();
-                alert('Sauvegardé');
-                loadRecentMessages();
-            } catch (e) { alert('Erreur'); }
+                alert('✅ Suggestion de modification envoyée à l\'admin !');
+                // No reload needed as change is not applied yet
+            } catch (e) { alert('Erreur lors de l\'envoi de la suggestion'); }
         }
 
         window.deleteMessage = async function (id) {
-            if (!confirm('Supprimer ce message ?')) return;
+            if (!confirm('Voulez-vous suggérer la suppression de ce message ?')) return;
             try {
-                const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error('Erreur suppression');
-                alert('Message supprimé');
-                loadRecentMessages();
+                const res = await fetch('/api/suggestions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message_id: id,
+                        type: 'delete',
+                        payload: {}
+                    })
+                });
+
+                if (!res.ok) throw new Error('Erreur');
+                alert('✅ Suggestion de suppression envoyée à l\'admin !');
             } catch (e) {
                 alert('Erreur: ' + e.message);
             }

@@ -128,6 +128,30 @@ function getDB() {
     return new Database(DB_PATH);
 }
 
+// Initialize Database Schema
+function initializeSchema() {
+    const db = getDB();
+    try {
+        db.prepare(`
+            CREATE TABLE IF NOT EXISTS suggestions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER,
+                type TEXT, -- 'edit', 'delete', 'relink'
+                payload TEXT, -- JSON content
+                status TEXT DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+                created_at INTEGER,
+                suggester_ip TEXT
+            )
+        `).run();
+        console.log('✅ DB Schema initialized (suggestions table check)');
+    } catch (e) {
+        console.error('❌ DB Schema init failed:', e);
+    } finally {
+        db.close();
+    }
+}
+initializeSchema();
+
 // Helper: Get audio URL preferring MP3 over OGG for iOS compatibility
 function getAudioUrl(audioPath) {
     if (!audioPath) return null;
@@ -170,6 +194,63 @@ function getAudioUrl(audioPath) {
 
     return `/audio/${basename}`; // Return original as fallback (client might get 404 but we tried)
 }
+
+// =============================================================================
+// ADMIN AUTH SYSTEM (Simple Magic Code)
+// =============================================================================
+
+const crypto = require('crypto');
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@example.com').split(',');
+const PENDING_CODES = new Map(); // email -> { code, expires }
+const ADMIN_TOKENS = new Set();  // token (in-memory session)
+
+// Middleware: Require Admin
+const requireAdmin = (req, res, next) => {
+    const token = req.headers['x-admin-token'];
+    if (!token || !ADMIN_TOKENS.has(token)) {
+        return res.status(403).json({ error: 'Accès refusé. Token invalide.' });
+    }
+    next();
+};
+
+// Login: Send Code (to Console/Log)
+app.post('/api/auth/login', (req, res) => {
+    const { email } = req.body;
+    if (!email || !ADMIN_EMAILS.includes(email.trim())) {
+        return res.status(403).json({ error: 'Email non autorisé.' });
+    }
+
+    // Generate Code
+    const code = crypto.randomInt(100000, 999999).toString();
+    PENDING_CODES.set(email, { code, expires: Date.now() + 300000 }); // 5 min
+
+    // Log Code (Since no SMTP)
+    console.log(`🔐 [ADMIN LOGIN] Code pour ${email}: ${code}`);
+    console.log('👉 Copiez ce code dans l\'interface Admin.');
+
+    res.json({ success: true, message: 'Code envoyé (vérifiez les logs serveur)' });
+});
+
+// Verify Code -> Get Token
+app.post('/api/auth/verify', (req, res) => {
+    const { email, code } = req.body;
+    const pending = PENDING_CODES.get(email);
+
+    if (!pending || pending.code !== code || Date.now() > pending.expires) {
+        return res.status(403).json({ error: 'Code invalide ou expiré.' });
+    }
+
+    // Generate Session Token
+    const token = crypto.randomBytes(32).toString('hex');
+    ADMIN_TOKENS.add(token);
+    PENDING_CODES.delete(email); // Invalidate code
+
+    res.json({ success: true, token });
+});
+
+app.post('/api/auth/check', requireAdmin, (req, res) => {
+    res.json({ success: true });
+});
 
 // =============================================================================
 // API ENDPOINTS - Core
@@ -353,8 +434,122 @@ app.get('/api/messages/:id', (req, res) => {
     });
 });
 
-// ADMIN: Supprimer un message (Soft Delete)
-app.delete('/api/messages/:id', (req, res) => {
+// =============================================================================
+// API ENDPOINTS - Admin Validation / Suggestions
+// =============================================================================
+
+// Public: Proposer une modification
+app.post('/api/suggestions', (req, res) => {
+    const { message_id, type, payload } = req.body;
+    // Basic validation
+    if (!message_id || !type || !payload) {
+        return res.status(400).json({ error: 'Données incomplètes' });
+    }
+
+    const db = getDB();
+    try {
+        const info = db.prepare(`
+            INSERT INTO suggestions (message_id, type, payload, created_at, suggester_ip, status)
+            VALUES (?, ?, ?, ?, ?, 'pending')
+        `).run(message_id, type, JSON.stringify(payload), Math.floor(Date.now() / 1000), req.ip);
+
+        db.close();
+        res.json({ success: true, id: info.lastInsertRowid });
+    } catch (e) {
+        if (db) db.close();
+        console.error('Submission error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Admin: Lister modifications en attente
+app.get('/api/admin/suggestions', requireAdmin, (req, res) => {
+    const db = getDB();
+    try {
+        const rows = db.prepare(`
+            SELECT s.*, m.question_text as current_question, m.transcript_torah as current_answer
+            FROM suggestions s
+            LEFT JOIN messages m ON s.message_id = m.id
+            WHERE s.status = 'pending'
+            ORDER BY s.created_at DESC
+        `).all();
+        db.close();
+        res.json({ suggestions: rows });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Admin: Refuser une suggestion
+app.post('/api/admin/suggestions/:id/reject', requireAdmin, (req, res) => {
+    const db = getDB();
+    try {
+        db.prepare('UPDATE suggestions SET status = "rejected" WHERE id = ?').run(req.params.id);
+        db.close();
+        res.json({ success: true });
+    } catch (e) {
+        if (db) db.close();
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Admin: Approuver une suggestion
+app.post('/api/admin/suggestions/:id/approve', requireAdmin, (req, res) => {
+    const db = getDB();
+    try {
+        const suggestion = db.prepare('SELECT * FROM suggestions WHERE id = ?').get(req.params.id);
+        if (!suggestion) {
+            db.close();
+            return res.status(404).json({ error: 'Suggestion introuvable' });
+        }
+        if (suggestion.status !== 'pending') {
+            db.close();
+            return res.status(400).json({ error: 'Suggestion déjà traitée' });
+        }
+
+        const payload = JSON.parse(suggestion.payload);
+
+        // Apply Logic
+        if (suggestion.type === 'edit') {
+            db.prepare(`
+                UPDATE messages 
+                SET question_text = ?, transcript_torah = ? 
+                WHERE id = ?
+            `).run(payload.question, payload.answer, suggestion.message_id);
+            console.log(`✅ Admin Approved Edit on msg ${suggestion.message_id}`);
+        } else if (suggestion.type === 'delete') {
+            db.prepare(`
+                UPDATE messages 
+                SET deleted_at = ? 
+                WHERE id = ?
+            `).run(Math.floor(Date.now() / 1000), suggestion.message_id);
+            console.log(`✅ Admin Approved Delete on msg ${suggestion.message_id}`);
+        } else if (suggestion.type === 'relink') {
+            // Logic handled by existing /api/relink logic but inside here
+            // Simplified: just update link
+            db.prepare(`
+                UPDATE messages 
+                SET link_question_id = ?, link_confidence = 1.0, link_method = 'manual_admin'
+                WHERE id = ?
+            `).run(payload.questionId, suggestion.message_id); // suggestion.message_id is the Audio ID
+        }
+
+        // Update Suggestion status
+        db.prepare('UPDATE suggestions SET status = "approved" WHERE id = ?').run(req.params.id);
+
+        db.close();
+        invalidateCache();
+        res.json({ success: true });
+    } catch (e) {
+        if (db) db.close();
+        console.error('Approve failed:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ADMIN: Supprimer un message (Direct) - PROTECTED
+app.delete('/api/messages/:id', requireAdmin, (req, res) => {
     const db = getDB();
     try {
         const info = db.prepare('UPDATE messages SET deleted_at = ? WHERE id = ?')
@@ -363,7 +558,7 @@ app.delete('/api/messages/:id', (req, res) => {
         db.close();
         if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
 
-        console.log(`🗑️ Message ${req.params.id} supprimé.`);
+        console.log(`🗑️ Message ${req.params.id} supprimé (Admin Direct).`);
         invalidateCache(); // FORCE REFRESH
         res.json({ success: true });
     } catch (e) {
@@ -372,8 +567,8 @@ app.delete('/api/messages/:id', (req, res) => {
     }
 });
 
-// ADMIN: Modifier un message
-app.put('/api/messages/:id', (req, res) => {
+// ADMIN: Modifier un message (Direct) - PROTECTED
+app.put('/api/messages/:id', requireAdmin, (req, res) => {
     const { question, answer } = req.body;
     const db = getDB();
     try {
@@ -386,7 +581,7 @@ app.put('/api/messages/:id', (req, res) => {
         db.close();
         if (info.changes === 0) return res.status(404).json({ error: 'Message non trouvé' });
 
-        console.log(`✏️ Message ${req.params.id} modifié.`);
+        console.log(`✏️ Message ${req.params.id} modifié (Admin Direct).`);
         invalidateCache(); // FORCE REFRESH
         res.json({ success: true });
     } catch (e) {
@@ -395,8 +590,8 @@ app.put('/api/messages/:id', (req, res) => {
     }
 });
 
-// ADMIN: Relier manuellement une réponse (audio) à une question
-app.post('/api/relink', (req, res) => {
+// ADMIN: Relier manuellement une réponse (audio) à une question - PROTECTED
+app.post('/api/relink', requireAdmin, (req, res) => {
     const { audioId, questionId } = req.body;
 
     // audioId = ID du message contenant l'audio/réponse
@@ -437,8 +632,8 @@ app.post('/api/relink', (req, res) => {
     }
 });
 
-// ADMIN: Délier un message
-app.post('/api/unlink', (req, res) => {
+// ADMIN: Délier un message - PROTECTED
+app.post('/api/unlink', requireAdmin, (req, res) => {
     const { id } = req.body;
     if (!id) return res.status(400).json({ error: 'ID manquant' });
 
