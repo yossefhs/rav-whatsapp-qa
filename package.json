@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "chmod +x ./download_media.sh && chmod +x ./convert_audio.sh && (./download_media.sh && ./convert_audio.sh > download.log 2>&1 &) && pm2-runtime start pm2.config.js",
+        "start": "chmod +x ./download_media.sh && chmod +x ./convert_audio.sh && ((./download_media.sh && ./convert_audio.sh) > download.log 2>&1 &) && pm2-runtime start pm2.config.js",
         "dev": "node server.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
