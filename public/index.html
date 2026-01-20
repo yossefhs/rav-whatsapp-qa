@@ -1633,15 +1633,25 @@
                                 <span style="font-size: 0.9em; color: var(--accent);">Confiance: ${data.confidence}%</span>
                                 <span style="font-size: 0.9em;">• ${data.sources.length} sources utilisées</span>
                             </div>
-                            
-                            <div class="feedback-controls" style="display:flex; gap:12px; align-items: center;">
-                                <span style="font-size: 0.8em; color: var(--text-muted); font-style: italic;">Votez pour entraîner l'assistant :</span>
-                                <button id="btn-up-${randomId}" onclick="sendFeedback('${randomId}', 'up')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius: 6px; padding: 4px 8px; cursor:pointer; font-size:1.1em; transition:all 0.2s;" title="Bonne réponse">👍</button>
-                                <button id="btn-down-${randomId}" onclick="sendFeedback('${randomId}', 'down')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius: 6px; padding: 4px 8px; cursor:pointer; font-size:1.1em; transition:all 0.2s;" title="Mauvaise réponse">👎</button>
-                            </div>
                         </div>
                     </div>
-                     <div style="margin-top: 8px; font-size: 0.8em; color: var(--text-muted); font-style: italic;">${data.disclaimer}</div>
+                    
+                    <div class="feedback-section" style="margin-top: 20px; background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border); border-radius: 12px; padding: 15px; text-align: center;">
+                        <div style="font-weight: 600; color: var(--accent); margin-bottom: 5px;">📢 Aidez-nous à améliorer l'assistant !</div>
+                        <div style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 12px;">Votre vote est essentiel pour affiner les futures réponses.</div>
+                        <div style="display: flex; justify-content: center; gap: 15px;">
+                            <button id="btn-up-${randomId}" onclick="sendFeedback('${randomId}', 'up')" 
+                                style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; padding: 8px 20px; cursor: pointer; font-size: 1em; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                                👍 Réponse Utile
+                            </button>
+                            <button id="btn-down-${randomId}" onclick="sendFeedback('${randomId}', 'down')" 
+                                style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; padding: 8px 20px; cursor: pointer; font-size: 1em; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                                👎 À revoir
+                            </button>
+                        </div>
+                    </div>
+
+                     <div style="margin-top: 12px; font-size: 0.8em; color: var(--text-muted); font-style: italic; text-align: center;">${data.disclaimer}</div>
                 </div>
             `;
 
