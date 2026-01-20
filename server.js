@@ -196,12 +196,11 @@ function getAudioUrl(audioPath) {
 }
 
 // =============================================================================
-// ADMIN AUTH SYSTEM (Simple Magic Code)
+// ADMIN AUTH SYSTEM (Simple Password)
 // =============================================================================
 
 const crypto = require('crypto');
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'admin@example.com').split(',');
-const PENDING_CODES = new Map(); // email -> { code, expires }
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Rav2026!'; // Default fallback
 const ADMIN_TOKENS = new Set();  // token (in-memory session)
 
 // Middleware: Require Admin
@@ -213,39 +212,25 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
-// Login: Send Code (to Console/Log)
+// Login: Password Check
 app.post('/api/auth/login', (req, res) => {
-    const { email } = req.body;
-    if (!email || !ADMIN_EMAILS.includes(email.trim())) {
-        return res.status(403).json({ error: 'Email non autorisé.' });
-    }
+    const { password } = req.body;
 
-    // Generate Code
-    const code = crypto.randomInt(100000, 999999).toString();
-    PENDING_CODES.set(email, { code, expires: Date.now() + 300000 }); // 5 min
-
-    // Log Code (Since no SMTP)
-    console.log(`🔐 [ADMIN LOGIN] Code pour ${email}: ${code}`);
-    console.log('👉 Copiez ce code dans l\'interface Admin.');
-
-    res.json({ success: true, message: 'Code envoyé (vérifiez les logs serveur)' });
-});
-
-// Verify Code -> Get Token
-app.post('/api/auth/verify', (req, res) => {
-    const { email, code } = req.body;
-    const pending = PENDING_CODES.get(email);
-
-    if (!pending || pending.code !== code || Date.now() > pending.expires) {
-        return res.status(403).json({ error: 'Code invalide ou expiré.' });
+    // Check Password
+    if (!password || password !== ADMIN_PASSWORD) {
+        // Slow down brute force (basic delay)
+        return setTimeout(() => res.status(403).json({ error: 'Mot de passe incorrect.' }), 1000);
     }
 
     // Generate Session Token
     const token = crypto.randomBytes(32).toString('hex');
     ADMIN_TOKENS.add(token);
-    PENDING_CODES.delete(email); // Invalidate code
 
     res.json({ success: true, token });
+});
+
+app.post('/api/auth/check', requireAdmin, (req, res) => {
+    res.json({ success: true });
 });
 
 app.post('/api/auth/check', requireAdmin, (req, res) => {
@@ -528,11 +513,11 @@ app.post('/api/admin/suggestions/:id/approve', requireAdmin, (req, res) => {
         } else if (suggestion.type === 'relink') {
             // Logic handled by existing /api/relink logic but inside here
             // Simplified: just update link
-            db.prepare(`
-                UPDATE messages 
-                SET link_question_id = ?, link_confidence = 1.0, link_method = 'manual_admin'
-                WHERE id = ?
-            `).run(payload.questionId, suggestion.message_id); // suggestion.message_id is the Audio ID
+            const info = db.prepare(`
+            UPDATE messages 
+            SET link_question_id = ?, link_confidence = 1.0, link_method = 'manual_admin'
+            WHERE id = ?
+        `).run(payload.questionId, suggestion.message_id); // suggestion.message_id is the Audio ID
         }
 
         // Update Suggestion status
@@ -545,6 +530,17 @@ app.post('/api/admin/suggestions/:id/approve', requireAdmin, (req, res) => {
         if (db) db.close();
         console.error('Approve failed:', e);
         res.status(500).json({ error: e.message });
+    }
+});
+
+// DEBUG: View Download Logs (Public for debugging, remove later)
+app.get('/api/debug/download-logs', (req, res) => {
+    const logPath = path.join(__dirname, 'download.log');
+    if (fs.existsSync(logPath)) {
+        const content = fs.readFileSync(logPath, 'utf8');
+        res.type('text/plain').send(content);
+    } else {
+        res.status(404).send('Log file not found (Process might not have started or no output yet).');
     }
 });
 
