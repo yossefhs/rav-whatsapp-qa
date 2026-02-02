@@ -22,7 +22,7 @@ function detectLanguage(text) {
   if (!text) return 'fr';
   const hebrewChars = /[\u0590-\u05FF]/;
   const arabicChars = /[\u0600-\u06FF]/;
-  
+
   if (hebrewChars.test(text)) return 'he';
   if (arabicChars.test(text)) return 'ar';
   return 'fr';
@@ -45,17 +45,17 @@ async function getEmbedding(text) {
 // Similarité cosinus
 function cosineSimilarity(a, b) {
   if (!a || !b || a.length !== b.length) return 0;
-  
+
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
-  
+
   for (let i = 0; i < a.length; i++) {
     dotProduct += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
   }
-  
+
   if (normA === 0 || normB === 0) return 0;
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
@@ -63,47 +63,63 @@ function cosineSimilarity(a, b) {
 // Similarité textuelle basique (mots-clés)
 function textSimilarity(text1, text2) {
   if (!text1 || !text2) return 0;
-  
+
   const words1 = new Set(text1.toLowerCase().split(/\W+/).filter(w => w.length > 2));
   const words2 = new Set(text2.toLowerCase().split(/\W+/).filter(w => w.length > 2));
-  
+
   const intersection = new Set([...words1].filter(x => words2.has(x)));
   const union = new Set([...words1, ...words2]);
-  
+
   return union.size > 0 ? intersection.size / union.size : 0;
 }
 
 // Analyse du contexte conversationnel
 function analyzeContext(question, answer, timeGap) {
   let contextScore = 0;
-  
-  // Mots-clés halakhiques communs
+
+  // Mots-clés halakhiques communs (étendu)
   const halakhicKeywords = [
     'chabbat', 'cacher', 'trefa', 'halavi', 'bassari', 'parve', 'mélange',
     'attente', 'lavage', 'bénédiction', 'prière', 'téfilin', 'talith',
-    'nidda', 'mikvé', 'conversion', 'guer', 'mamzer', 'agouna'
+    'nidda', 'mikvé', 'conversion', 'guer', 'mamzer', 'agouna',
+    'rav', 'torah', 'loi', 'interdit', 'permis', 'manger', 'viande', 'lait',
+    'mariage', 'divorce', 'kiddouch', 'havdala', 'fête', 'yom tov'
   ];
-  
+
   const qWords = question.toLowerCase();
   const aWords = answer.toLowerCase();
-  
+
+  // Comptage des mots-clés communs
+  let keywordMatches = 0;
   for (const keyword of halakhicKeywords) {
     if (qWords.includes(keyword) && aWords.includes(keyword)) {
-      contextScore += 0.1;
+      keywordMatches++;
     }
   }
-  
+  contextScore += Math.min(0.2, keywordMatches * 0.05);
+
+  // NOUVEAU: Bonus fort pour messages très proches dans le temps (< 5 min)
+  if (timeGap < 0.083) { // 5 minutes
+    contextScore += 0.25;
+  } else if (timeGap < 0.5) { // 30 minutes
+    contextScore += 0.15;
+  } else if (timeGap < 2) { // 2 heures
+    contextScore += 0.08;
+  }
+
   // Bonus pour questions courtes et directes
   if (question.length < 100 && answer.length > 50) {
     contextScore += 0.05;
   }
-  
+
   // Pénalité pour écarts temporels très importants
   if (timeGap > 24) {
-    contextScore -= 0.1;
+    contextScore -= 0.15;
+  } else if (timeGap > 12) {
+    contextScore -= 0.08;
   }
-  
-  return Math.min(0.3, contextScore);
+
+  return Math.min(0.4, Math.max(-0.1, contextScore));
 }
 
 // Vérification IA améliorée
@@ -126,7 +142,7 @@ async function verifyWithAI(question, answer) {
         }
       ]
     });
-    
+
     const result = JSON.parse(response.choices[0].message.content);
     return {
       score: Math.max(0, Math.min(1, result.score || 0.5)),
@@ -150,7 +166,7 @@ async function enhancedMatchAnswerToQuestion({
   questionTextHint
 }) {
   console.log(`🧠 Liaison intelligente pour ${audioWAId}...`);
-  
+
   // 1) Si reply direct → lien immédiat
   if (repliedToMessageId) {
     db.prepare(`
@@ -158,7 +174,7 @@ async function enhancedMatchAnswerToQuestion({
       SET link_question_id=?, link_confidence=?, link_method=?
       WHERE wa_message_id=?
     `).run(repliedToMessageId, REPLY_HARDLINK, 'reply', audioWAId);
-    
+
     console.log(`✅ Lien direct (reply): ${audioWAId} → ${repliedToMessageId}`);
     return { qid: repliedToMessageId, confidence: REPLY_HARDLINK, method: 'reply' };
   }
@@ -208,7 +224,7 @@ async function enhancedMatchAnswerToQuestion({
     // Similarité sémantique
     let semanticScore = 0;
     let questionEmbedding = null;
-    
+
     try {
       // Récupérer ou créer l'embedding de la question
       if (candidate.q_embed) {
@@ -220,7 +236,7 @@ async function enhancedMatchAnswerToQuestion({
             .run(JSON.stringify(questionEmbedding), candidate.id);
         }
       }
-      
+
       if (answerEmbedding && questionEmbedding) {
         semanticScore = cosineSimilarity(answerEmbedding, questionEmbedding);
       }
@@ -232,16 +248,16 @@ async function enhancedMatchAnswerToQuestion({
     const textScore = textSimilarity(question, answerText);
 
     // Facteurs contextuels
-    const sameAuthor = candidate.sender_name && answerSender && 
-                      candidate.sender_name === answerSender;
+    const sameAuthor = candidate.sender_name && answerSender &&
+      candidate.sender_name === answerSender;
     const timeGap = (answerTsSec - candidate.ts) / 3600; // heures
     const questionLang = detectLanguage(question);
-    
+
     // Analyse du contexte conversationnel
     const contextScore = analyzeContext(question, answerText, timeGap);
 
     // Calcul du score final
-    let finalScore = 
+    let finalScore =
       (SIM_WEIGHT * semanticScore) +
       (0.3 * textScore) +
       (CONTEXT_WEIGHT * contextScore) +
@@ -281,17 +297,17 @@ async function enhancedMatchAnswerToQuestion({
   // 5) Vérification IA si score suffisant
   let finalScore = bestMatch.score;
   let aiVerification = null;
-  
+
   if (VERIFY_WITH_GPT && bestMatch.score > 0.3) {
     try {
       aiVerification = await verifyWithAI(
-        bestMatch.candidate.question_text, 
+        bestMatch.candidate.question_text,
         answerText
       );
-      
+
       // Combinaison pondérée: 70% algorithme + 30% IA
       finalScore = 0.7 * bestMatch.score + 0.3 * aiVerification.score;
-      
+
       console.log(`🤖 Vérification IA: ${aiVerification.score.toFixed(3)} (${aiVerification.confidence})`);
     } catch (e) {
       console.log('⚠️ Erreur vérification IA:', e?.message);
@@ -306,7 +322,7 @@ async function enhancedMatchAnswerToQuestion({
       SET link_question_id=NULL, link_confidence=?, link_method=?
       WHERE wa_message_id=?
     `).run(finalScore, 'low-score', audioWAId);
-    
+
     return { qid: null, confidence: finalScore, method: 'low-score' };
   }
 
@@ -319,7 +335,7 @@ async function enhancedMatchAnswerToQuestion({
   `).run(bestMatch.candidate.wa_message_id, finalScore, method, audioWAId);
 
   console.log(`✅ Lien créé: ${audioWAId} → ${bestMatch.candidate.wa_message_id} (${finalScore.toFixed(3)})`);
-  
+
   return {
     qid: bestMatch.candidate.wa_message_id,
     confidence: finalScore,
