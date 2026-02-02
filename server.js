@@ -301,57 +301,65 @@ app.get('/api/stats', (req, res) => {
 // API ENDPOINTS - Search
 // =============================================================================
 
-// Recherche principale
+// Recherche principale (avec scoring de pertinence)
 app.get('/api/search', async (req, res) => {
-    const { q, limit = 20, page = 1 } = req.query;
+    const { q, limit = 20 } = req.query;
 
     if (!q || q.length < 2) {
         return res.json({ results: [], total: 0 });
     }
 
-    const db = getDB();
-    const offset = (page - 1) * limit;
-
-    // Recherche FTS5
-    const searchTerms = q.split(' ').filter(t => t.length > 1).join(' AND ');
-
-    let results = [];
     try {
-        results = db.prepare(`
-            SELECT m.id, m.question_text, m.transcript_torah, m.audio_path, m.ts, m.group_name
-            FROM messages_fts fts
-            JOIN messages m ON fts.rowid = m.id
-            WHERE messages_fts MATCH ?
-            AND m.deleted_at IS NULL
-            ORDER BY m.ts DESC
-            LIMIT ? OFFSET ?
-        `).all(searchTerms, limit, offset);
-    } catch {
-        // Fallback LIKE search
-        results = db.prepare(`
-            SELECT id, question_text, transcript_torah, audio_path, ts, group_name
-            FROM messages
-            WHERE (question_text LIKE ? OR transcript_torah LIKE ?)
-            AND deleted_at IS NULL
-            ORDER BY ts DESC
-            LIMIT ? OFFSET ?
-        `).all(`%${q}%`, `%${q}%`, limit, offset);
+        // Utiliser la recherche vectorielle pour le scoring de pertinence
+        const { searchLocal } = require('./rag_api');
+        const results = await searchLocal(q, parseInt(limit));
+
+        res.json({
+            query: q,
+            results: results.map(r => ({
+                id: r.id,
+                question: r.question || '',
+                answer: r.answer || '',
+                hasAudio: !!r.audio_path,
+                audioUrl: getAudioUrl(r.audio_path),
+                date: r.timestamp ? new Date(r.timestamp * 1000).toISOString() : null,
+                score: r.score ? parseFloat(r.score.toFixed(3)) : null
+            })),
+            total: results.length
+        });
+    } catch (error) {
+        console.error('Search error:', error);
+        // Fallback to simple FTS search
+        const db = getDB();
+        try {
+            const results = db.prepare(`
+                SELECT id, question_text, transcript_torah, audio_path, ts
+                FROM messages
+                WHERE (question_text LIKE ? OR transcript_torah LIKE ?)
+                AND deleted_at IS NULL
+                ORDER BY ts DESC
+                LIMIT ?
+            `).all(`%${q}%`, `%${q}%`, limit);
+            db.close();
+
+            res.json({
+                query: q,
+                results: results.map(r => ({
+                    id: r.id,
+                    question: r.question_text || '',
+                    answer: r.transcript_torah || '',
+                    hasAudio: !!r.audio_path,
+                    audioUrl: getAudioUrl(r.audio_path),
+                    date: r.ts ? new Date(r.ts * 1000).toISOString() : null,
+                    score: null
+                })),
+                total: results.length
+            });
+        } catch (e) {
+            if (db) db.close();
+            res.status(500).json({ error: e.message });
+        }
     }
-
-    db.close();
-
-    res.json({
-        query: q,
-        results: results.map(r => ({
-            id: r.id,
-            question: r.question_text || '',
-            answer: r.transcript_torah || '',
-            hasAudio: !!r.audio_path,
-            audioUrl: getAudioUrl(r.audio_path),
-            date: r.ts ? new Date(r.ts * 1000).toISOString() : null
-        })),
-        total: results.length
-    });
 });
 
 // =============================================================================
