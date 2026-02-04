@@ -114,7 +114,6 @@ const { setupAIRouterEndpoints } = require('./ai_router');
 const maintenanceRoutes = require('./maintenance_routes');
 
 const app = express();
-app.use('/api/debug', maintenanceRoutes);
 
 // Lancement du Bot (Uniquement si activé)
 if (process.env.ENABLE_BOT === 'true') {
@@ -164,6 +163,7 @@ initializeSchema();
 // Setup V2 Routes (Streaming & AI Router)
 setupV2StreamingRoutes(app);
 setupAIRouterEndpoints(app);
+app.use('/api/debug', maintenanceRoutes);
 
 // Helper: Get audio URL preferring MP3 over OGG for iOS compatibility
 function getAudioUrl(audioPath) {
