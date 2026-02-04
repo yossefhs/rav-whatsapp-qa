@@ -44,7 +44,7 @@ function loadVectors() {
         const rows = db.prepare(`
             SELECT e.id, e.vector, 
                    m.relevance_score,
-                   COALESCE(SUM(CASE WHEN f.is_relevant = 1 THEN 1 WHEN f.is_relevant = 0 THEN -1 ELSE 0 END), 0) as feedback_score
+                   COALESCE(SUM(CASE WHEN f.is_valid = 1 THEN 1 WHEN f.is_valid = 0 THEN -1 ELSE 0 END), 0) as feedback_score
             FROM message_embeddings e
             JOIN messages m ON e.id = m.id
             LEFT JOIN feedback f ON m.id = f.message_id
