@@ -95,4 +95,33 @@ router.post('/build-embeddings', async (req, res) => {
     }
 });
 
+// POST /api/debug/search
+router.post('/search', async (req, res) => {
+    const { query } = req.body;
+    const logs = [];
+    const log = (msg) => logs.push(msg);
+
+    try {
+        const { searchLocal, getEmbedding } = require('./rag_api');
+
+        log(`Searching for: "${query}"`);
+        const vecStart = Date.now();
+        const vector = await getEmbedding(query);
+        log(`Embedding generated in ${Date.now() - vecStart}ms. Vector length: ${vector.length}`);
+
+        const results = await searchLocal(query, 5);
+        log(`searchLocal returned ${results.length} results.`);
+
+        res.json({
+            query,
+            logs,
+            results_count: results.length,
+            results: results
+        });
+    } catch (e) {
+        log(`ERROR: ${e.message}`);
+        res.status(500).json({ error: e.message, logs });
+    }
+});
+
 module.exports = router;
