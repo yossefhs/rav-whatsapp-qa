@@ -111,8 +111,11 @@ const upload = multer({
 // Initialisation
 const { setupV2StreamingRoutes } = require('./server_routes_v2');
 const { setupAIRouterEndpoints } = require('./ai_router');
+const maintenanceRoutes = require('./maintenance_routes');
 
 const app = express();
+app.use('/api/debug', maintenanceRoutes);
+
 // Lancement du Bot (Uniquement si activé)
 if (process.env.ENABLE_BOT === 'true') {
     const { initBot } = require('./bot');
