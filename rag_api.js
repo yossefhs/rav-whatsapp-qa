@@ -26,6 +26,7 @@ try {
 }
 
 // Cache des vecteurs en mémoire
+// Cache des vecteurs en mémoire (Optimisé: ID + Vector + Metadata légères uniquement)
 let vectorsCache = null;
 let lastCacheUpdate = 0;
 
@@ -35,16 +36,15 @@ function loadVectors() {
         return vectorsCache;
     }
 
-    console.log('🔄 Chargement des vecteurs en mémoire...');
+    console.log('🔄 Chargement des vecteurs en mémoire (Mode Léger)...');
     const db = new Database(DB_PATH, { readonly: true });
     try {
-        // Jointure pour avoir les métadonnées utiles
+        // ON NE CHARGE PAS LE TEXTE (Question/Reponse) ICI pour économiser la RAM
+        // On charge uniquement ce qui est nécessaire au calcul de similarité/score
         const rows = db.prepare(`
             SELECT e.id, e.vector, 
-                   m.question_text, m.transcript_torah, m.transcript_raw, m.audio_path,
-                   m.ts, m.group_name, m.relevance_score,
-                   -- Calcul du score de pertinence basé sur les votes (Net Promoter Score simplifié)
-                   COALESCE(SUM(CASE WHEN f.is_valid = 1 THEN 1 WHEN f.is_valid = 0 THEN -1 ELSE 0 END), 0) as feedback_score
+                   m.relevance_score,
+                   COALESCE(SUM(CASE WHEN f.is_relevant = 1 THEN 1 WHEN f.is_relevant = 0 THEN -1 ELSE 0 END), 0) as feedback_score
             FROM message_embeddings e
             JOIN messages m ON e.id = m.id
             LEFT JOIN feedback f ON m.id = f.message_id
@@ -55,19 +55,12 @@ function loadVectors() {
         vectorsCache = rows.map(r => ({
             id: r.id,
             vector: JSON.parse(r.vector),
-            payload: {
-                question: r.question_text,
-                answer: r.transcript_torah || r.transcript_raw,
-                audio_path: r.audio_path,
-                timestamp: r.ts,
-                group_name: r.group_name,
-                feedback_score: r.feedback_score // Store score for reranking
-            },
+            feedback_score: r.feedback_score,
             relevance_score: r.relevance_score || 0.5
         }));
 
         lastCacheUpdate = Date.now();
-        console.log(`✅ ${vectorsCache.length} vecteurs chargés en RAM.`);
+        console.log(`✅ ${vectorsCache.length} vecteurs chargés en RAM (Optimisé).`);
     } catch (e) {
         console.error('Erreur chargement vecteurs:', e);
         vectorsCache = [];
@@ -99,44 +92,65 @@ async function getEmbedding(text) {
     return response.data[0].embedding;
 }
 
-// Recherche Locale
+// Recherche Locale (Hybride: Vector RAM + Content DB)
 async function searchLocal(query, limit = 10) {
+    let db = null;
     try {
         const queryVector = await getEmbedding(query);
         const vectors = loadVectors();
 
-        // Calcul score pour tous avec Boost Feedback
-        const results = vectors.map(v => {
+        // 1. Calcul des scores en RAM (Rapide & Léger)
+        const ranked = vectors.map(v => {
             const cosine = cosineSimilarity(queryVector, v.vector);
-
-            // Boost: +5% par vote positif (net), borné à +/- 20%
-            const boost = Math.min(Math.max((v.payload.feedback_score || 0) * 0.05, -0.2), 0.2);
-
+            // Boost: +5% par vote positif
+            const boost = Math.min(Math.max((v.feedback_score || 0) * 0.05, -0.2), 0.2);
             return {
-                ...v,
+                id: v.id,
+                score: cosine * (1 + boost),
                 raw_score: cosine,
-                score: cosine * (1 + boost)
+                feedback_score: v.feedback_score // Pass it through for debugging if needed
             };
-        });
-
-        // Trier et limiter
-        return results
+        })
             .sort((a, b) => b.score - a.score)
-            .slice(0, limit)
-            .map(r => ({
+            .slice(0, limit);
+
+        if (ranked.length === 0) return [];
+
+        // 2. Hydratation : Récupérer le contenu complet depuis la DB pour les Top K seulement
+        db = new Database(DB_PATH, { readonly: true });
+        const ids = ranked.map(r => r.id);
+        const placeholders = ids.map(() => '?').join(',');
+
+        const details = db.prepare(`
+            SELECT id, question_text, transcript_torah, transcript_raw, audio_path, ts, group_name
+            FROM messages
+            WHERE id IN (${placeholders})
+        `).all(...ids);
+
+        // 3. Fusionner Score + Contenu
+        // Map pour lookup rapide
+        const contentMap = new Map(details.map(d => [d.id, d]));
+
+        return ranked.map(r => {
+            const content = contentMap.get(r.id);
+            if (!content) return null; // Should not happen
+            return {
                 id: r.id,
                 score: r.score,
-                feedback_score: r.relevance_score,
-                question: r.payload.question || '',
-                answer: r.payload.answer || '',
-                audio_path: r.payload.audio_path,
-                group_name: r.payload.group_name || '',
-                timestamp: r.payload.timestamp
-            }));
+                feedback_score: r.feedback_score, // properly passed
+                question: content.question_text || '',
+                answer: content.transcript_torah || content.transcript_raw || '',
+                audio_path: content.audio_path,
+                group_name: content.group_name || '',
+                timestamp: content.ts
+            };
+        }).filter(Boolean);
 
     } catch (error) {
         console.error('Local search error:', error);
         return [];
+    } finally {
+        if (db) db.close();
     }
 }
 

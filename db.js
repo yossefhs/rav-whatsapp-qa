@@ -1,78 +1,80 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 require('dotenv').config();
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
-let db = null;
+const db = new Database(DB_PATH);
+// db.pragma('journal_mode = WAL'); // Optional: better-sqlite3 handles concurrency well usually
 
-function getDb() {
-  if (!db) {
-    // Only initialize if DB file exists (handled by bot restoration)
-    // Or if we accept creating an empty one (but we prefer restoring)
-    // For safety, we just open it. If it doesn't exist, sqlite3 creates empty.
-    // BUT we want to avoid creating empty if we are waiting for restore.
-    // However, if we block here, we block everything.
-    // Best: Initialize on first USE. 
-    console.log(`🔌 Opening SQLite DB: ${DB_PATH}`);
-    db = new sqlite3.Database(DB_PATH);
+// Initialization
+try {
+  db.prepare(`PRAGMA journal_mode=WAL;`).run();
+  db.prepare(`CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wa_message_id TEXT UNIQUE,
+    group_name TEXT,
+    sender_name TEXT,
+    ts INTEGER,
+    audio_path TEXT,
+    audio_seconds INTEGER,
+    question_text TEXT,
+    question_message_id TEXT,
+    transcript_raw TEXT,
+    transcript_torah TEXT
+  )`).run();
+  db.prepare(`CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT);`).run();
 
-    // Initialize Schema
-    db.serialize(() => {
-      db.run(`PRAGMA journal_mode=WAL;`);
-      db.run(`CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        wa_message_id TEXT UNIQUE,
-        group_name TEXT,
-        sender_name TEXT,
-        ts INTEGER,
-        audio_path TEXT,
-        audio_seconds INTEGER,
-        question_text TEXT,
-        question_message_id TEXT,
-        transcript_raw TEXT,
-        transcript_torah TEXT
-      )`);
-      db.run(`CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT);`);
-      db.run(`ALTER TABLE messages ADD COLUMN sender_jid TEXT`, err => { });
-      db.run(`ALTER TABLE messages ADD COLUMN replied_to_message_id TEXT`, err => { });
-      db.run(`ALTER TABLE messages ADD COLUMN sources_json TEXT`, err => { });
-      db.run(`ALTER TABLE messages ADD COLUMN coherence_json TEXT`, err => { });
-      db.run(`ALTER TABLE messages ADD COLUMN needs_review INTEGER DEFAULT 0`, err => { });
-      db.run(`CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
-        question_text, transcript_raw, transcript_torah, content='messages', content_rowid='id'
-      )`);
-      // Triggers...
-      db.run(`CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
-        INSERT INTO messages_fts(rowid, question_text, transcript_raw, transcript_torah)
-        VALUES (new.id, new.question_text, new.transcript_raw, new.transcript_torah);
-      END;`);
-      db.run(`CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
-        INSERT INTO messages_fts(messages_fts, rowid, question_text, transcript_raw, transcript_torah)
-        VALUES ('delete', old.id, old.question_text, old.transcript_raw, old.transcript_torah);
-        INSERT INTO messages_fts(rowid, question_text, transcript_raw, transcript_torah)
-        VALUES (new.id, new.question_text, new.transcript_raw, new.transcript_torah);
-      END;`);
-    });
+  // Optional columns
+  try { db.prepare(`ALTER TABLE messages ADD COLUMN sender_jid TEXT`).run(); } catch (e) { }
+  try { db.prepare(`ALTER TABLE messages ADD COLUMN replied_to_message_id TEXT`).run(); } catch (e) { }
+  try { db.prepare(`ALTER TABLE messages ADD COLUMN sources_json TEXT`).run(); } catch (e) { }
+  try { db.prepare(`ALTER TABLE messages ADD COLUMN coherence_json TEXT`).run(); } catch (e) { }
+  try { db.prepare(`ALTER TABLE messages ADD COLUMN needs_review INTEGER DEFAULT 0`).run(); } catch (e) { }
+
+  db.prepare(`CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+    question_text, transcript_raw, transcript_torah, content='messages', content_rowid='id'
+  )`).run();
+
+  db.prepare(`CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, question_text, transcript_raw, transcript_torah)
+    VALUES (new.id, new.question_text, new.transcript_raw, new.transcript_torah);
+  END;`).run();
+
+  db.prepare(`CREATE TRIGGER IF NOT EXISTS messages_au AFTER UPDATE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, question_text, transcript_raw, transcript_torah)
+    VALUES ('delete', old.id, old.question_text, old.transcript_raw, old.transcript_torah);
+    INSERT INTO messages_fts(rowid, question_text, transcript_raw, transcript_torah)
+    VALUES (new.id, new.question_text, new.transcript_raw, new.transcript_torah);
+  END;`).run();
+
+} catch (e) {
+  console.error("DB Initialization Error:", e);
+}
+
+// Helpers to maintain Async Interface
+async function run(sql, params = []) {
+  try {
+    const info = db.prepare(sql).run(...params);
+    return info; // info has .changes, .lastInsertRowid
+  } catch (err) {
+    throw err;
   }
-  return db;
 }
 
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    getDb().run(sql, params, function (err) { if (err) reject(err); else resolve(this); });
-  });
+async function get(sql, params = []) {
+  try {
+    return db.prepare(sql).get(...params);
+  } catch (err) {
+    throw err;
+  }
 }
 
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    getDb().get(sql, params, function (err, row) { if (err) reject(err); else resolve(row); });
-  });
-}
-
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    getDb().all(sql, params, function (err, rows) { if (err) reject(err); else resolve(rows); });
-  });
+async function all(sql, params = []) {
+  try {
+    return db.prepare(sql).all(...params);
+  } catch (err) {
+    throw err;
+  }
 }
 
 module.exports = {
@@ -168,9 +170,8 @@ module.exports = {
   },
   // Accès direct à la DB pour requêtes avancées (RAG, tests)
   getDb() {
-    const Database = require('better-sqlite3');
-    const dbPath = process.env.DB_PATH || require('path').join(__dirname, 'ravqa.db');
-    return new Database(dbPath, { readonly: true });
+    return db;
   }
 };
+
 

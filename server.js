@@ -1,3 +1,6 @@
+// FIX LOCAL SSL ISSUES
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 /**
  * RavQA Server - Version 2.0 Refonte
  * Architecture épurée et moderne
@@ -66,7 +69,7 @@ const { importWhatsAppZip } = require('./import_chat_zip');
 
 // Import RAG Search API
 // Import invalidateCache
-const { setupRAGEndpoints, invalidateCache } = require('./rag_api');
+const { setupRAGEndpoints, invalidateCache, searchLocal } = require('./rag_api');
 
 // ...
 
@@ -106,6 +109,9 @@ const upload = multer({
 });
 
 // Initialisation
+const { setupV2StreamingRoutes } = require('./server_routes_v2');
+const { setupAIRouterEndpoints } = require('./ai_router');
+
 const app = express();
 // Lancement du Bot (Uniquement si activé)
 if (process.env.ENABLE_BOT === 'true') {
@@ -151,6 +157,10 @@ function initializeSchema() {
     }
 }
 initializeSchema();
+
+// Setup V2 Routes (Streaming & AI Router)
+setupV2StreamingRoutes(app);
+setupAIRouterEndpoints(app);
 
 // Helper: Get audio URL preferring MP3 over OGG for iOS compatibility
 function getAudioUrl(audioPath) {
@@ -301,65 +311,57 @@ app.get('/api/stats', (req, res) => {
 // API ENDPOINTS - Search
 // =============================================================================
 
-// Recherche principale (avec scoring de pertinence)
+// Recherche principale
 app.get('/api/search', async (req, res) => {
-    const { q, limit = 20 } = req.query;
+    const { q, limit = 20, page = 1 } = req.query;
 
     if (!q || q.length < 2) {
         return res.json({ results: [], total: 0 });
     }
 
+    const db = getDB();
+    const offset = (page - 1) * limit;
+
+    // Recherche FTS5
+    const searchTerms = q.split(' ').filter(t => t.length > 1).join(' AND ');
+
+    let results = [];
     try {
-        // Utiliser la recherche vectorielle pour le scoring de pertinence
-        const { searchLocal } = require('./rag_api');
-        const results = await searchLocal(q, parseInt(limit));
-
-        res.json({
-            query: q,
-            results: results.map(r => ({
-                id: r.id,
-                question: r.question || '',
-                answer: r.answer || '',
-                hasAudio: !!r.audio_path,
-                audioUrl: getAudioUrl(r.audio_path),
-                date: r.timestamp ? new Date(r.timestamp * 1000).toISOString() : null,
-                score: r.score ? parseFloat(r.score.toFixed(3)) : null
-            })),
-            total: results.length
-        });
-    } catch (error) {
-        console.error('Search error:', error);
-        // Fallback to simple FTS search
-        const db = getDB();
-        try {
-            const results = db.prepare(`
-                SELECT id, question_text, transcript_torah, audio_path, ts
-                FROM messages
-                WHERE (question_text LIKE ? OR transcript_torah LIKE ?)
-                AND deleted_at IS NULL
-                ORDER BY ts DESC
-                LIMIT ?
-            `).all(`%${q}%`, `%${q}%`, limit);
-            db.close();
-
-            res.json({
-                query: q,
-                results: results.map(r => ({
-                    id: r.id,
-                    question: r.question_text || '',
-                    answer: r.transcript_torah || '',
-                    hasAudio: !!r.audio_path,
-                    audioUrl: getAudioUrl(r.audio_path),
-                    date: r.ts ? new Date(r.ts * 1000).toISOString() : null,
-                    score: null
-                })),
-                total: results.length
-            });
-        } catch (e) {
-            if (db) db.close();
-            res.status(500).json({ error: e.message });
-        }
+        results = db.prepare(`
+            SELECT m.id, m.question_text, m.transcript_torah, m.audio_path, m.ts, m.group_name
+            FROM messages_fts fts
+            JOIN messages m ON fts.rowid = m.id
+            WHERE messages_fts MATCH ?
+            AND m.deleted_at IS NULL
+            ORDER BY m.ts DESC
+            LIMIT ? OFFSET ?
+        `).all(searchTerms, limit, offset);
+    } catch {
+        // Fallback LIKE search
+        results = db.prepare(`
+            SELECT id, question_text, transcript_torah, audio_path, ts, group_name
+            FROM messages
+            WHERE (question_text LIKE ? OR transcript_torah LIKE ?)
+            AND deleted_at IS NULL
+            ORDER BY ts DESC
+            LIMIT ? OFFSET ?
+        `).all(`%${q}%`, `%${q}%`, limit, offset);
     }
+
+    db.close();
+
+    res.json({
+        query: q,
+        results: results.map(r => ({
+            id: r.id,
+            question: r.question_text || '',
+            answer: r.transcript_torah || '',
+            hasAudio: !!r.audio_path,
+            audioUrl: getAudioUrl(r.audio_path),
+            date: r.ts ? new Date(r.ts * 1000).toISOString() : null
+        })),
+        total: results.length
+    });
 });
 
 // =============================================================================
@@ -659,29 +661,78 @@ app.post('/api/unlink', requireAdmin, (req, res) => {
     }
 });
 
+// (Imported at top)
+
 // ADMIN: Trouver des candidats pour relier
-app.get('/api/candidates/:id', (req, res) => {
+app.get('/api/candidates/:id', async (req, res) => {
     // On cherche des messages TEXTE (queston) autour de la date du message AUDIO (id)
+    // MISE A JOUR: Recherche sémantique prioritaire si transcription disponible
     const db = getDB();
     try {
-        const target = db.prepare('SELECT ts, group_name FROM messages WHERE id = ?').get(req.params.id);
+        const target = db.prepare('SELECT ts, group_name, transcript_torah, transcript_raw FROM messages WHERE id = ?').get(req.params.id);
         if (!target) return res.status(404).json({ error: 'Message non trouvé' });
 
-        // Chercher 48h avant
-        const window = 48 * 3600;
-        const minTs = target.ts - window;
-        const maxTs = target.ts; // La question est généralement AVANT la réponse
+        let candidates = [];
+        const textContent = target.transcript_torah || target.transcript_raw;
 
-        const candidates = db.prepare(`
-            SELECT id, question_text, ts, group_name, sender_name 
-            FROM messages 
-            WHERE ts BETWEEN ? AND ?
-            AND (audio_path IS NULL OR audio_path = '')
-            AND length(question_text) > 5
-            AND deleted_at IS NULL
-            ORDER BY ts DESC
-            LIMIT 50
-        `).all(minTs, maxTs);
+        // 1. RECHERCHE SÉMANTIQUE (Si texte dispo)
+        if (textContent && textContent.length > 20) {
+            console.log(`🔎 Finding candidates via Semantic Search for msg ${req.params.id}`);
+            try {
+                // On cherche tout message similaire. Les questions pertinentes auront un score élevé.
+                const results = await searchLocal(textContent, 30);
+
+                candidates = results
+                    .filter(r => r.id != req.params.id) // Exclure soi-même
+                    // .filter(r => !r.audio_path) // Optionnel: Prioriser les questions sans audio? Non, on veut tout voir.
+                    .map(r => ({
+                        id: r.id,
+                        question_text: r.question, // searchLocal retourne 'question'
+                        ts: r.timestamp,           // searchLocal retourne 'timestamp'
+                        group_name: r.group_name,
+                        sender_name: '',           // Non disponible via searchLocal pour l'instant
+                        score: r.score,
+                        is_semantic: true
+                    }));
+            } catch (e) {
+                console.error('Semantic candidate search failed:', e);
+            }
+        }
+
+        // 2. RECHERCHE TEMPORELLE (Fallback ou Complément si peu de résultats)
+        // Chercher 48h avant (Logique originale conservee comme filet de sécurité)
+        if (candidates.length < 10) {
+            const window = 48 * 3600;
+            const minTs = target.ts - window;
+            const maxTs = target.ts; // La question est généralement AVANT la réponse
+
+            const timeCandidates = db.prepare(`
+                SELECT id, question_text, ts, group_name, sender_name 
+                FROM messages 
+                WHERE ts BETWEEN ? AND ?
+                AND (audio_path IS NULL OR audio_path = '')
+                AND length(question_text) > 5
+                AND deleted_at IS NULL
+                ORDER BY ts DESC
+                LIMIT 20
+            `).all(minTs, maxTs);
+
+            // Fusionner sans doublons
+            const existingIds = new Set(candidates.map(c => c.id));
+            for (const tc of timeCandidates) {
+                if (!existingIds.has(tc.id) && tc.id != req.params.id) {
+                    candidates.push({ ...tc, is_semantic: false });
+                }
+            }
+        }
+
+        // Trier: Sémantiques d'abord, puis temporels récents
+        candidates.sort((a, b) => {
+            if (a.is_semantic && !b.is_semantic) return -1;
+            if (!a.is_semantic && b.is_semantic) return 1;
+            if (a.score && b.score) return b.score - a.score; // Score décroissant
+            return b.ts - a.ts; // Date décroissante par défaut
+        });
 
         db.close();
         res.json({ candidates });

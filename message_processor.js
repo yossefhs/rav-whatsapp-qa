@@ -281,7 +281,8 @@ async function processMessage(msg, { isCatchUp = false } = {}) {
                 console.log('⚠️ Firebase sync failed (audio):', e.message)
             );
 
-            // Note: autoLinkAnswer supprimé - enhancedMatchAnswerToQuestion gère déjà le linking
+            // 6) Auto-liage (sur la version Torah générée)
+            await autoLinkAnswer(waId, chat.name, versionTorah || raw || '');
 
             if (!isCatchUp) {
                 console.log(`🔗 Lien ${match.method} → qid=${match.qid || 'aucune'} (conf=${(match.confidence || 0).toFixed(2)})`);

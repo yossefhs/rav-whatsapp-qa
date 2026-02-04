@@ -1405,7 +1405,7 @@
         const searchInput = document.querySelector('.search-box');
         const resultsDiv = document.getElementById('results');
         const loadingDiv = document.getElementById('loading');
-        let currentSearchMode = 'classic';
+        let currentSearchMode = 'auto';
         const topicQuestions = {
             cacherout: ["Combien de temps entre viande et lait ?", "Poisson et lait ?", "Cachériser un four ?", "Micro-onde mixte ?"],
             shabbat: ["Porter une clé ?", "Ouvrir bouteille ?", "Utiliser éponge ?", "Mettre de la crème ?"],
@@ -1572,39 +1572,194 @@
             query = query || searchInput.value;
             if (!query) return;
 
-            loadingDiv.classList.add('active');
+            // Clear results but don't show full screen loader for streaming
             resultsDiv.innerHTML = '';
 
             // Auto-Detect Mode
-            let mode = 'classic';
+            let mode = 'auto'; // Default to auto
             const cleanQuery = query.toLowerCase().trim();
-            const isQuestion = query.length > 20 || cleanQuery.includes('comment') || cleanQuery.includes('pourquoi') || cleanQuery.includes('?');
+            const isQuestion = query.length > 5 || cleanQuery.includes('?') || cleanQuery.includes('comment') || cleanQuery.includes('pourquoi');
 
             if (isQuestion) mode = 'ai';
+            if (currentSearchMode && currentSearchMode !== 'auto') mode = currentSearchMode;
 
             console.log(`🧠 Smart Search detected mode: ${mode} for "${query}"`);
 
-            try {
-                if (mode === 'ai') {
-                    const res = await fetch('/api/ask', {
+            if (mode === 'ai') {
+                // V2 STREAMING LOGIC
+                const { card, contentDiv, statusDiv, updateMeta } = createStreamingCard();
+                resultsDiv.appendChild(card);
+
+                try {
+                    const response = await fetch('/api/v2/ask/stream', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ question: query, limit: 5 })
+                        body: JSON.stringify({ query: query })
                     });
-                    const data = await res.json();
-                    if (data.success) renderAIResponse(data);
-                    else throw new Error(data.error);
-                } else {
+
+                    if (!response.ok) throw new Error('V2 API Error');
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let fullText = '';
+                    let sources = [];
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete line
+
+                        for (const line of lines) {
+                            if (line.startsWith('event: ')) continue;
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.substring(6));
+
+                                    if (data.step) {
+                                        const steps = {
+                                            'classifying': '🤔 Analyse de l\'intention...',
+                                            'classified': '🎯 Intention identifiée',
+                                            'searching': '🔍 Recherche dans la base...',
+                                            'found': '📚 Sources trouvées',
+                                            'generating': '💡 Rédaction de la réponse...'
+                                        };
+                                        statusDiv.textContent = steps[data.step] || data.step;
+                                        statusDiv.style.opacity = '1';
+                                    }
+
+                                    if (data.text) {
+                                        fullText += data.text;
+                                        contentDiv.innerHTML = formatMarkdown(fullText); // We need a simple formatter or textContent
+                                    }
+
+                                    if (data.sources) sources = data.sources;
+
+                                    if (data.duration) {
+                                        statusDiv.textContent = `✅ Terminé en ${data.duration}ms`;
+                                        setTimeout(() => statusDiv.style.opacity = '0.5', 2000);
+                                        updateMeta(data.confidence, data.sourcesUsed || sources.length);
+                                        // Add sources validation buttons
+                                        appendFeedback(card, sources);
+                                        // Display Sources with Audio & Transcript
+                                        renderSources(sources);
+                                    }
+                                } catch (e) {
+                                    console.warn('SSE Parse Error:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // ... error handler
+                    console.error('V2 Stream failed, fallback to V1', e);
+                    card.remove();
+                    fallbackV1(query);
+                }
+            } else {
+                // Classic Search ...
+                loadingDiv.classList.add('active');
+                try {
                     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                     const data = await res.json();
                     renderResults(data.results || [], 'Résultats');
+                } catch (e) {
+                    resultsDiv.innerHTML = '<div class="empty-state">Erreur de recherche</div>';
+                } finally {
+                    loadingDiv.classList.remove('active');
                 }
+            }
+        }
+
+        // NEW: Render Sources Helper
+        function renderSources(sources) {
+            if (!sources || sources.length === 0) return;
+
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'results-title';
+            titleDiv.style.cssText = 'margin: 30px 0 15px 0; font-size: 16px; animation: fadeIn 0.5s;';
+            titleDiv.textContent = '📚 Sources utilisées (Audio & Transcription)';
+            resultsDiv.appendChild(titleDiv);
+
+            sources.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'result-card';
+                div.style.cssText = 'opacity: 0.9; scale: 0.98; margin-bottom: 15px; animation: slideIn 0.3s ease-out; animation-fill-mode: both; animation-delay: ' + (index * 100) + 'ms;';
+                div.style.cursor = 'pointer';
+
+                div.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('audio')) return;
+                    // Compatibility with existing openModal
+                    openModal({
+                        id: s.id,
+                        question: s.question,
+                        answer: s.answer,
+                        audioUrl: s.audio_url || s.audio_path || s.audioUrl,
+                        date: s.timestamp ? new Date(s.timestamp).toLocaleDateString() : 'Date inconnue',
+                        similarity: s.score ? Math.round(s.score * 100) : 0
+                    });
+                });
+
+                // AUDIO LOGIC
+                // Fix path if needed (if it comes as raw filename or full path)
+                let audioSrc = s.audio_url || s.audio_path || s.audioUrl;
+                if (audioSrc && !audioSrc.startsWith('http') && !audioSrc.startsWith('/')) {
+                    // Assume it's a filename in /audio/ dir
+                    // Remove 'media/' prefix if present
+                    const filename = audioSrc.split('/').pop();
+                    audioSrc = `/audio/${filename}`;
+                }
+
+                let audioHtml = audioSrc ?
+                    `<div class="modal-audio" style="margin-top:10px; display:flex; align-items:center; gap:10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 1.2em;">🎧</span>
+                        <audio controls preload="none" playsinline src="${audioSrc}" style="flex:1; height: 32px;"></audio>
+                     </div>` : '';
+
+                div.innerHTML = `
+                    <div class="result-question" style="font-size: 15px; color: var(--accent); font-weight: 500;">
+                        <span style="opacity:0.7; font-size: 0.9em; margin-right: 5px;">#${index + 1}</span> 
+                        ${s.question}
+                    </div>
+                    <div class="result-answer" style="font-size: 13px; margin-top: 8px; max-height: 100px; overflow-y: auto; color: var(--text-secondary);">
+                        ${s.answer ? s.answer.substring(0, 300) + (s.answer.length > 300 ? '...' : '') : 'Pas de transcription.'}
+                    </div>
+                    ${audioHtml}
+                    <div class="result-meta" style="margin-top: 8px; font-size: 0.85em; opacity: 0.6;">
+                        <span>Source ID: ${s.id} • Pertinence: ${s.score ? Math.round(s.score * 100) : '?'}%</span>
+                    </div>
+                `;
+                resultsDiv.appendChild(div);
+            });
+        }
+
+        async function fallbackV1(query) {
+            loadingDiv.classList.add('active');
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: query, limit: 5 })
+                });
+                const data = await res.json();
+                if (data.success) renderAIResponse(data);
+                else throw new Error(data.error);
             } catch (e) {
-                console.error(e);
-                resultsDiv.innerHTML = '<div class="empty-state">Erreur de recherche</div>';
+                resultsDiv.innerHTML = '<div class="empty-state">Erreur de recherche (V1 & V2)</div>';
             } finally {
                 loadingDiv.classList.remove('active');
             }
+        }
+
+        // Simple Markdown Formatter for streaming
+        function formatMarkdown(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
         }
 
         async function sendFeedback(answerId, vote) {
@@ -1615,6 +1770,58 @@
                 setTimeout(() => btn.style.transform = 'scale(1)', 200);
             }
             alert(`Merci pour votre vote ${vote === 'up' ? 'positif 👍' : 'négatif 👎'} ! (Ceci améliorera les futures réponses)`);
+        }
+
+        function createStreamingCard() {
+            const randomId = Math.floor(Math.random() * 10000);
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.style.cssText = 'border-left: 4px solid var(--accent); background: linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent);';
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <div class="result-question">🤖 Réponse de l'Assistant V2</div>
+                    <div class="streaming-status" style="font-size: 0.8em; color: var(--accent); font-weight: 500;">🚀 Connecté</div>
+                </div>
+                
+                <div class="result-answer" style="white-space: pre-wrap; font-size: 1.05em; line-height: 1.8; color: var(--text-primary); font-weight: 400; min-height: 50px;"></div>
+                
+                <div class="result-meta" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 10px; opacity: 0.5; transition: opacity 0.3s;">
+                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div>
+                            <span class="meta-confidence" style="font-size: 0.9em; color: var(--accent);"></span>
+                            <span class="meta-sources" style="font-size: 0.9em;"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const contentDiv = card.querySelector('.result-answer');
+            const statusDiv = card.querySelector('.streaming-status');
+            const metaDiv = card.querySelector('.result-meta');
+
+            const updateMeta = (confidence, count) => {
+                card.querySelector('.meta-confidence').textContent = confidence ? `Confiance: ${confidence}%` : '';
+                card.querySelector('.meta-sources').textContent = count ? `• ${count} sources utilisées` : '';
+                metaDiv.style.opacity = '1';
+            };
+
+            return { card, contentDiv, statusDiv, updateMeta };
+        }
+
+        function appendFeedback(card, sources) {
+            const randomId = Math.floor(Math.random() * 10000);
+            const div = document.createElement('div');
+            div.className = 'feedback-section';
+            div.style.cssText = 'margin-top: 20px; background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border); border-radius: 12px; padding: 15px; text-align: center; animation: fadeIn 1s;';
+            div.innerHTML = `
+                <div style="font-weight: 600; color: var(--accent); margin-bottom: 5px;">📢 Feedback V2</div>
+                 <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
+                    <button onclick="sendFeedback('${randomId}', 'up')" style="cursor: pointer;">👍 Utile</button>
+                    <button onclick="sendFeedback('${randomId}', 'down')" style="cursor: pointer;">👎 À revoir</button>
+                </div>
+             `;
+            card.appendChild(div);
         }
 
         function renderAIResponse(data) {
