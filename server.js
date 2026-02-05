@@ -123,12 +123,13 @@ if (process.env.ENABLE_BOT === 'true') {
     console.log('ℹ️ Bot désactivé (ENABLE_BOT != true) - Mode API/Web uniquement');
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
 app.use('/audio', express.static(MEDIA_DIR));
 console.log(`📂 Audio Directory: ${MEDIA_DIR}`);
+
+// Mount Maintenance/Debug Routes (CRITICAL for diagnostics)
+app.use('/api/debug', maintenanceRoutes);
 
 // =============================================================================
 // DATABASE HELPER
