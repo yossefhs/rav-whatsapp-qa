@@ -2024,14 +2024,11 @@
 
             if (action === 'delete') {
                 e.stopPropagation();
-                if (!confirm('Supprimer ce message ?')) return;
-                try {
-                    const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
-                    if (!res.ok) throw new Error('Erreur serveur');
-                    alert('Message supprimé ✓');
-                    loadRecentMessages();
-                } catch (err) {
-                    alert('Erreur: ' + err.message);
+                // Call the suggestion flow defined below
+                if (window.deleteMessage) {
+                    window.deleteMessage(id);
+                } else {
+                    alert('Erreur: Fonction de suppression non chargée.');
                 }
             } else if (action === 'edit') {
                 e.stopPropagation();
