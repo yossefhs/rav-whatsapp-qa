@@ -3,7 +3,32 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
-const { getEmbedding } = require('./rag_api'); // We need getEmbedding reuse (or from build_embeddings?)
+const { getEmbedding } = require('./rag_api');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+const AdmZip = require('adm-zip');
+
+// ... existing helper ...
+
+// POST /api/debug/upload-media
+router.post('/upload-media', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const MEDIA_DIR = process.env.MEDIA_DIR || path.join(__dirname, 'media');
+    try {
+        console.log(`📦 Received ZIP. Extracting to ${MEDIA_DIR}...`);
+        const zip = new AdmZip(req.file.path);
+        zip.extractAllTo(MEDIA_DIR, true); // overwrite = true
+
+        fs.unlinkSync(req.file.path); // cleanup zip
+
+        const fileCount = fs.readdirSync(MEDIA_DIR).length;
+        res.json({ success: true, message: `Extracted to ${MEDIA_DIR}`, count: fileCount });
+    } catch (e) {
+        console.error('Upload Error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
 
 const router = express.Router();
 const DB_PATH = process.env.DB_PATH || 'ravqa.db';
