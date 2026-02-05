@@ -142,7 +142,7 @@ function getDB() {
 function initializeSchema() {
     const db = getDB();
     try {
-        db.prepare(`
+        db.exec(`
             CREATE TABLE IF NOT EXISTS suggestions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message_id INTEGER,
@@ -162,7 +162,7 @@ function initializeSchema() {
                 ip TEXT,
                 user_agent TEXT
             )
-        `).run();
+        `);
         console.log('✅ DB Schema initialized (suggestions table check)');
     } catch (e) {
         console.error('❌ DB Schema init failed:', e);
