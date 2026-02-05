@@ -32,7 +32,6 @@ router.post('/upload-media', upload.single('file'), (req, res) => {
     }
 });
 
-const router = express.Router();
 const DB_PATH = process.env.DB_PATH || 'ravqa.db';
 const MEDIA_DIR = path.join(__dirname, 'media');
 
