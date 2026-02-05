@@ -126,7 +126,9 @@ if (process.env.ENABLE_BOT === 'true') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/audio', express.static(path.join(__dirname, 'media')));
+const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
+app.use('/audio', express.static(MEDIA_DIR));
+console.log(`📂 Audio Directory: ${MEDIA_DIR}`);
 
 // =============================================================================
 // DATABASE HELPER
@@ -180,7 +182,8 @@ function getAudioUrl(audioPath) {
     if (!audioPath) return null;
 
     const basename = path.basename(audioPath);
-    const mediaDir = path.join(__dirname, 'media');
+    // Use the same MEDIA_DIR defined earlier (need to move definition up or reuse)
+    const mediaDir = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
 
     // 1. Check exact match (or OGG)
     if (fs.existsSync(path.join(mediaDir, basename))) {
