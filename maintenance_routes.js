@@ -8,6 +8,8 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const AdmZip = require('adm-zip');
 
+const router = express.Router();
+
 // ... existing helper ...
 
 // POST /api/debug/upload-media
