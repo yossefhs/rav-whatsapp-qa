@@ -124,4 +124,21 @@ router.post('/search', async (req, res) => {
     }
 });
 
+// GET /api/debug/ls
+router.get('/ls', (req, res) => {
+    const dir = req.query.path || '/app';
+    try {
+        if (!fs.existsSync(dir)) return res.json({ error: 'Path not found: ' + dir });
+        const files = fs.readdirSync(dir).map(f => {
+            try {
+                const stat = fs.statSync(path.join(dir, f));
+                return { name: f, isDir: stat.isDirectory(), size: stat.size };
+            } catch (e) { return { name: f, error: e.message }; }
+        });
+        res.json({ path: dir, files });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;
