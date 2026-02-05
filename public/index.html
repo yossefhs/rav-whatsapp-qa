@@ -2310,6 +2310,9 @@
         loadStats();
         loadRecentMessages();
 
+        // Track Visit
+        fetch('/api/visit', { method: 'POST' }).catch(console.error);
+
     </script>
 </body>
 

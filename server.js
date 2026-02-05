@@ -149,6 +149,16 @@ function initializeSchema() {
                 status TEXT DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
                 created_at INTEGER,
                 suggester_ip TEXT
+            );
+            CREATE TABLE IF NOT EXISTS visitor_stats (
+                date TEXT PRIMARY KEY,
+                count INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS visitor_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts INTEGER,
+                ip TEXT,
+                user_agent TEXT
             )
         `).run();
         console.log('✅ DB Schema initialized (suggestions table check)');
@@ -824,6 +834,51 @@ let importStatus = { active: false, progress: 0, filename: null };
 
 app.get('/api/upload/status', (req, res) => {
     res.json(importStatus);
+});
+
+// =============================================================================
+// VISITOR TRACKING
+// =============================================================================
+
+// Increment visit (called by frontend)
+app.post('/api/visit', (req, res) => {
+    const today = new Date().toISOString().split('T')[0];
+    const db = getDB();
+    try {
+        // Upsert daily count
+        db.prepare(`
+            INSERT INTO visitor_stats (date, count) VALUES (?, 1)
+            ON CONFLICT(date) DO UPDATE SET count = count + 1
+        `).run(today);
+
+        // Optional: Log detailed visit (limit to last 1000 to save space if needed, or just insert)
+        // For privacy/simplicity, we just count.
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Visit track error:', e);
+        res.status(500).json({ error: 'Track failed' });
+    } finally {
+        db.close();
+    }
+});
+
+// Get total visits (for admin)
+app.get('/api/admin/visits', (req, res) => {
+    const db = getDB();
+    try {
+        const row = db.prepare('SELECT SUM(count) as total FROM visitor_stats').get();
+        const todayRow = db.prepare('SELECT count FROM visitor_stats WHERE date = ?').get(new Date().toISOString().split('T')[0]);
+
+        res.json({
+            total: row.total || 0,
+            today: todayRow ? todayRow.count : 0
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Stats failed' });
+    } finally {
+        db.close();
+    }
 });
 
 // =============================================================================
