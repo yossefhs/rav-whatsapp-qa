@@ -234,15 +234,20 @@
                     `;
                 }
 
+                const isDelete = s.type === 'delete';
+                const cardStyle = isDelete ? 'border: 1px solid rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.05);' : '';
+                const btnText = isDelete ? '🗑️ Confirmer Suppression' : '✅ Valider';
+                const btnStyle = isDelete ? 'background:#ef4444;' : 'background:#10b981;';
+
                 return `
-                    <div class="suggestion-card">
+                    <div class="suggestion-card" style="${cardStyle}">
                         <div style="grid-column: span 2; display:flex; gap:10px; align-items:center;">
                             <span class="badge badge-${s.type}">${s.type}</span>
                             <span style="color:var(--text-muted); font-size:0.9em;">Il y a ${Math.floor((Date.now() / 1000 - s.created_at) / 60)} min • IP: ${s.suggester_ip}</span>
                         </div>
                         ${contentHTML}
                         <div class="actions">
-                            <button onclick="approve(${s.id})" style="background:#10b981; border:none; color:white; padding:8px 16px; border-radius:6px; cursor:pointer;">✅ Valider</button>
+                            <button onclick="approve(${s.id})" style="${btnStyle} border:none; color:white; padding:8px 16px; border-radius:6px; cursor:pointer;">${btnText}</button>
                             <button onclick="reject(${s.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:6px; cursor:pointer;">Refuser</button>
                         </div>
                     </div>
