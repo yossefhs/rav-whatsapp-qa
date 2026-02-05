@@ -141,4 +141,16 @@ router.get('/ls', (req, res) => {
     }
 });
 
+// GET /api/debug/cat
+router.get('/cat', (req, res) => {
+    const filePath = req.query.path;
+    try {
+        if (!fs.existsSync(filePath)) return res.status(404).send('File not found');
+        const content = fs.readFileSync(filePath, 'utf8');
+        res.type('text/plain').send(content);
+    } catch (e) {
+        res.status(500).send(e.message);
+    }
+});
+
 module.exports = router;
