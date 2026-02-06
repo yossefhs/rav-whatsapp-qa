@@ -129,32 +129,34 @@ router.get('/verify-audio', (req, res) => {
         res.status(500).json({ error: e.message, stack: e.stack });
     }
 });
-const db = new Database(DB_PATH, { readonly: true });
-try {
-    const msgCount = db.prepare('SELECT COUNT(*) as c FROM messages').get().c;
-    let embCount = 0;
+// GET /api/debug/stats
+router.get('/stats', (req, res) => {
+    const db = new Database(DB_PATH, { readonly: true });
     try {
-        embCount = db.prepare('SELECT COUNT(*) as c FROM message_embeddings').get().c;
-    } catch (e) { embCount = -1; } // Table might not exist
+        const msgCount = db.prepare('SELECT COUNT(*) as c FROM messages').get().c;
+        let embCount = 0;
+        try {
+            embCount = db.prepare('SELECT COUNT(*) as c FROM message_embeddings').get().c;
+        } catch (e) { embCount = -1; } // Table might not exist
 
-    // Audio count
-    let audioCount = 0;
-    if (fs.existsSync(MEDIA_DIR)) {
-        audioCount = fs.readdirSync(MEDIA_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.ogg') || f.endsWith('.opus')).length;
+        // Audio count
+        let audioCount = 0;
+        if (fs.existsSync(MEDIA_DIR)) {
+            audioCount = fs.readdirSync(MEDIA_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.ogg') || f.endsWith('.opus')).length;
+        }
+
+        res.json({
+            messages: msgCount,
+            embeddings: embCount,
+            audio_files: audioCount,
+            db_size: fs.statSync(DB_PATH).size,
+            uptime: process.uptime()
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    } finally {
+        db.close();
     }
-
-    res.json({
-        messages: msgCount,
-        embeddings: embCount,
-        audio_files: audioCount,
-        db_size: fs.statSync(DB_PATH).size,
-        uptime: process.uptime()
-    });
-} catch (e) {
-    res.status(500).json({ error: e.message });
-} finally {
-    db.close();
-}
 });
 
 // POST /api/debug/build-embeddings
