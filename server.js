@@ -124,10 +124,32 @@ if (process.env.ENABLE_BOT === 'true') {
 }
 
 app.use(express.static(path.join(__dirname, 'public')));
-const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
-// Audio Middleware: Fallback .ogg -> .mp3
+// Audio Middleware: Filename Mapping & Fallback
+let audioMap = {};
+try {
+    const mapPath = path.join(__dirname, 'audio_map.json');
+    if (fs.existsSync(mapPath)) {
+        audioMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+        console.log(`🗺️ Loaded Audio Map with ${Object.keys(audioMap).length} entries.`);
+    }
+} catch (e) {
+    console.error('⚠️ Failed to load audio_map.json:', e.message);
+}
+
 app.use('/audio', (req, res, next) => {
-    // If request is for .ogg, check if we have .mp3 instead
+    let filename = req.path.replace(/^\//, ''); // Remove leading slash
+
+    // 1. Check Explicit Map (DB ID -> Filesystem Name)
+    if (audioMap[filename]) {
+        const mappedFile = audioMap[filename];
+        const mappedPath = path.join(MEDIA_DIR, mappedFile);
+        if (fs.existsSync(mappedPath)) {
+            // console.log(`🗺️ Mapped: ${filename} -> ${mappedFile}`);
+            return res.sendFile(mappedPath);
+        }
+    }
+
+    // 2. Fallback .ogg -> .mp3 (Regex)
     if (req.path.endsWith('.ogg')) {
         const originalPath = path.join(MEDIA_DIR, req.path);
         // If .ogg doesn't exist...
@@ -135,7 +157,6 @@ app.use('/audio', (req, res, next) => {
             const mp3Path = originalPath.replace(/\.ogg$/, '.mp3');
             // ...but .mp3 does, serve it!
             if (fs.existsSync(mp3Path)) {
-                // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
                 return res.sendFile(mp3Path);
             }
         }
