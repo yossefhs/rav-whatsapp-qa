@@ -119,7 +119,12 @@
 
         <!-- Stats Section -->
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
-            <h3>📈 Statistiques de Connexion</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>📈 Statistiques de Connexion</h3>
+                <button class="admin-btn" onclick="triggerGDriveSync()" style="background:var(--warning); color:white;">
+                    🔄 Backup GDrive
+                </button>
+            </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
                 <div
                     style="background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
@@ -271,6 +276,27 @@
                 headers: { 'x-admin-token': token }
             });
             if (res.ok) loadSuggestions();
+        }
+        async function triggerGDriveSync() {
+            if (!confirm('⚠️ Attention : Ne lancez ceci que si les audios ne marchent pas !\nCela va télécharger ~5Go depuis Google Drive.\n\nContinuer ?')) return;
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerText = '⏳ Lancement...';
+
+            try {
+                const res = await fetch('/api/debug/sync-gdrive', {
+                    method: 'POST',
+                    headers: { 'x-admin-token': localStorage.getItem('admin_token') }
+                });
+                const data = await res.json();
+                alert('✅ ' + data.message);
+            } catch (e) {
+                alert('❌ Erreur: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '🔄 Sync Audio (Backup GDrive)';
+            }
         }
     </script>
 </body>
