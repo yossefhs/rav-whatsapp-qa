@@ -32,6 +32,25 @@ router.post('/upload-media', upload.single('file'), (req, res) => {
     }
 });
 
+// POST /api/debug/sync-gdrive (Emergency Backup)
+router.post('/sync-gdrive', (req, res) => {
+    console.log('🔄 Triggering Emergency GDrive Sync...');
+    // Execute download_media.sh in background
+    exec('./download_media.sh', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`❌ GDrive Sync Error: ${error.message}`);
+            return; // Don't crash
+        }
+        if (stderr) {
+            console.error(`⚠️ GDrive Sync Stderr: ${stderr}`);
+        }
+        console.log(`✅ GDrive Sync Output: ${stdout}`);
+    });
+
+    // Respond immediately (don't wait for script)
+    res.json({ success: true, message: 'Sync started in background. Check logs.' });
+});
+
 const DB_PATH = process.env.DB_PATH || 'ravqa.db';
 const MEDIA_DIR = path.join(__dirname, 'media');
 
