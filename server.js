@@ -146,11 +146,6 @@ app.use('/audio', (req, res, next) => {
 app.use('/audio', express.static(MEDIA_DIR));
 console.log(`📂 Audio Directory: ${MEDIA_DIR}`);
 
-// 404 Handler for /audio (Prevent SPA fallback)
-app.use('/audio/*', (req, res) => {
-    res.status(404).send('Audio file not found');
-});
-
 // Mount Maintenance/Debug Routes (CRITICAL for diagnostics)
 app.use('/api/debug', maintenanceRoutes);
 
