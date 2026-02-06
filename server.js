@@ -125,6 +125,24 @@ if (process.env.ENABLE_BOT === 'true') {
 
 app.use(express.static(path.join(__dirname, 'public')));
 const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
+// Audio Middleware: Fallback .ogg -> .mp3
+app.use('/audio', (req, res, next) => {
+    // If request is for .ogg, check if we have .mp3 instead
+    if (req.path.endsWith('.ogg')) {
+        const originalPath = path.join(MEDIA_DIR, req.path);
+        // If .ogg doesn't exist...
+        if (!fs.existsSync(originalPath)) {
+            const mp3Path = originalPath.replace(/\.ogg$/, '.mp3');
+            // ...but .mp3 does, serve it!
+            if (fs.existsSync(mp3Path)) {
+                // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
+                return res.sendFile(mp3Path);
+            }
+        }
+    }
+    next();
+});
+
 app.use('/audio', express.static(MEDIA_DIR));
 console.log(`📂 Audio Directory: ${MEDIA_DIR}`);
 
