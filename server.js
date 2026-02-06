@@ -137,7 +137,10 @@ try {
 }
 
 app.use('/audio', (req, res, next) => {
-    let filename = req.path.replace(/^\//, ''); // Remove leading slash
+    // Remove leading slash and URL decoding to match keys in audio_map.json
+    let filename = decodeURIComponent(req.path.replace(/^\//, ''));
+
+    //  console.log(`🔍 Audio Request: ${filename}`);
 
     // 1. Check Explicit Map (DB ID -> Filesystem Name)
     if (audioMap[filename]) {
