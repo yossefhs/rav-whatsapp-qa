@@ -99,34 +99,62 @@ async function generateEmbeddingsBatch(limit = 50) {
     }
 }
 
-// GET /api/debug/stats
-router.get('/stats', (req, res) => {
-    const db = new Database(DB_PATH, { readonly: true });
+// GET /api/debug/verify-audio
+router.get('/verify-audio', (req, res) => {
     try {
-        const msgCount = db.prepare('SELECT COUNT(*) as c FROM messages').get().c;
-        let embCount = 0;
-        try {
-            embCount = db.prepare('SELECT COUNT(*) as c FROM message_embeddings').get().c;
-        } catch (e) { embCount = -1; } // Table might not exist
+        if (!fs.existsSync(MEDIA_DIR)) return res.json({ error: 'MEDIA_DIR missing', path: MEDIA_DIR });
 
-        // Audio count
-        let audioCount = 0;
-        if (fs.existsSync(MEDIA_DIR)) {
-            audioCount = fs.readdirSync(MEDIA_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.ogg') || f.endsWith('.opus')).length;
-        }
+        const files = fs.readdirSync(MEDIA_DIR);
+        if (files.length === 0) return res.json({ error: 'No files in MEDIA_DIR', path: MEDIA_DIR });
+
+        const firstFile = files[0];
+        const filePath = path.join(MEDIA_DIR, firstFile);
+        const stat = fs.statSync(filePath);
 
         res.json({
-            messages: msgCount,
-            embeddings: embCount,
-            audio_files: audioCount,
-            db_size: fs.statSync(DB_PATH).size,
-            uptime: process.uptime()
+            status: 'ok',
+            media_dir: MEDIA_DIR,
+            resolved_path: path.resolve(MEDIA_DIR),
+            example_file: {
+                name: firstFile,
+                path: filePath,
+                size: stat.size,
+                mode: stat.mode,
+                uid: stat.uid,
+                gid: stat.gid
+            },
+            cwd: process.cwd()
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
-    } finally {
-        db.close();
+        res.status(500).json({ error: e.message, stack: e.stack });
     }
+});
+const db = new Database(DB_PATH, { readonly: true });
+try {
+    const msgCount = db.prepare('SELECT COUNT(*) as c FROM messages').get().c;
+    let embCount = 0;
+    try {
+        embCount = db.prepare('SELECT COUNT(*) as c FROM message_embeddings').get().c;
+    } catch (e) { embCount = -1; } // Table might not exist
+
+    // Audio count
+    let audioCount = 0;
+    if (fs.existsSync(MEDIA_DIR)) {
+        audioCount = fs.readdirSync(MEDIA_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.ogg') || f.endsWith('.opus')).length;
+    }
+
+    res.json({
+        messages: msgCount,
+        embeddings: embCount,
+        audio_files: audioCount,
+        db_size: fs.statSync(DB_PATH).size,
+        uptime: process.uptime()
+    });
+} catch (e) {
+    res.status(500).json({ error: e.message });
+} finally {
+    db.close();
+}
 });
 
 // POST /api/debug/build-embeddings
