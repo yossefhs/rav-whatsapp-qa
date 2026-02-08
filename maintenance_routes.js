@@ -228,4 +228,83 @@ router.get('/cat', (req, res) => {
     }
 });
 
+// POST /api/debug/cleanup-renamed-files - Delete renamed audio files to free space
+router.post('/cleanup-renamed-files', (req, res) => {
+    try {
+        console.log('🧹 Starting cleanup of renamed audio files...');
+
+        const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
+
+        if (!fs.existsSync(MEDIA_DIR)) {
+            return res.status(404).json({ error: 'MEDIA_DIR not found', path: MEDIA_DIR });
+        }
+
+        const files = fs.readdirSync(MEDIA_DIR);
+        const toDelete = [];
+        const toKeep = [];
+
+        // Identify files to delete (renamed) vs keep (WhatsApp originals)
+        files.forEach(file => {
+            // Keep files with WhatsApp patterns: @g.us or @lid
+            if (file.includes('@g.us') || file.includes('@lid')) {
+                toKeep.push(file);
+            }
+            // Delete renamed files
+            else if (
+                file.startsWith('AUDIO-') ||
+                file.startsWith('import_') ||
+                file.startsWith('wa_') ||
+                file.match(/^\d{8}-AUDIO-/)
+            ) {
+                toDelete.push(file);
+            }
+        });
+
+        console.log(`📊 Files to keep: ${toKeep.length}, to delete: ${toDelete.length}`);
+
+        // Calculate space
+        let spaceToFree = 0;
+        toDelete.forEach(file => {
+            try {
+                const filePath = path.join(MEDIA_DIR, file);
+                const stats = fs.statSync(filePath);
+                spaceToFree += stats.size;
+            } catch (err) {
+                console.error(`Error stating ${file}:`, err.message);
+            }
+        });
+
+        console.log(`💾 Space to free: ${(spaceToFree / 1024 / 1024 / 1024).toFixed(2)} GB`);
+
+        // Delete files
+        let deleted = 0;
+        let errors = 0;
+
+        toDelete.forEach(file => {
+            try {
+                const filePath = path.join(MEDIA_DIR, file);
+                fs.unlinkSync(filePath);
+                deleted++;
+            } catch (err) {
+                console.error(`Error deleting ${file}:`, err.message);
+                errors++;
+            }
+        });
+
+        console.log(`✅ Deleted: ${deleted}, Errors: ${errors}, Kept: ${toKeep.length}`);
+
+        res.json({
+            success: true,
+            deleted,
+            errors,
+            kept: toKeep.length,
+            spaceFreed: `${(spaceToFree / 1024 / 1024 / 1024).toFixed(2)} GB`
+        });
+
+    } catch (error) {
+        console.error('❌ Cleanup error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
