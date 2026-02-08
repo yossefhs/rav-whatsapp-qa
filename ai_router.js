@@ -162,23 +162,17 @@ function getAudioUrl(audioPath) {
 
     // 1. Check exact match
     if (fs.existsSync(path.join(mediaDir, basename))) {
-        return `https://v2.ravabichid.fr/audio/${basename}`; // Hardcoded Public URL for WhatsApp
+        return `/audio/${basename}`; // Relative URL works for both web and API
     }
 
     // 2. Check MP3 version
     const mp3Name = basename.replace(/\.(ogg|opus)$/i, '.mp3');
     if (fs.existsSync(path.join(mediaDir, mp3Name))) {
-        return `https://v2.ravabichid.fr/audio/${mp3Name}`;
+        return `/audio/${mp3Name}`;
     }
 
-    // Return relative if no domain known (bot.js might handle it locally if file, but usually users want links)
-    // Assuming we want a clickable link in WhatsApp. If local file, we can't link it easily unless we upload it.
-    // Bot V2 uses 'routeAndAnswer' -> text.
-    // If we want actual audio FILES sent, bot.js needs to handle it.
-    // User said "amene bien les reponses source ... avec l audio".
-    // "Audio" could mean the link.
-    // Let's provide the filename/link.
-    return basename;
+    // Return basename as fallback
+    return `/audio/${basename}`;
 }
 // Note: Ideally, we should use the domain/IP. For now, let's stick to appending text details.
 
