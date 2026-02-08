@@ -124,10 +124,6 @@ if (process.env.ENABLE_BOT === 'true') {
 }
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Define MEDIA_DIR before using it
-const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
-
 // Audio Middleware: Filename Mapping & Fallback
 let audioMap = {};
 try {
