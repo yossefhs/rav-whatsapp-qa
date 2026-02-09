@@ -114,6 +114,8 @@ const { setupAIRouterEndpoints } = require('./ai_router');
 const maintenanceRoutes = require('./maintenance_routes');
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Lancement du Bot (Uniquement si activé)
 if (process.env.ENABLE_BOT === 'true') {
@@ -127,12 +129,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
 // Audio Middleware: Fallback .ogg -> .mp3
 app.use('/audio', (req, res, next) => {
-    // If request is for .ogg, check if we have .mp3 instead
-    if (req.path.endsWith('.ogg')) {
+    // If request is for .ogg or .opus, check if we have .mp3 instead
+    if (req.path.endsWith('.ogg') || req.path.endsWith('.opus')) {
         const originalPath = path.join(MEDIA_DIR, req.path);
-        // If .ogg doesn't exist...
+        // If file doesn't exist...
         if (!fs.existsSync(originalPath)) {
-            const mp3Path = originalPath.replace(/\.ogg$/, '.mp3');
+            const mp3Path = originalPath.replace(/\.(ogg|opus)$/, '.mp3');
             // ...but .mp3 does, serve it!
             if (fs.existsSync(mp3Path)) {
                 // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
@@ -515,7 +517,7 @@ app.get('/api/admin/suggestions', requireAdmin, (req, res) => {
 app.post('/api/admin/suggestions/:id/reject', requireAdmin, (req, res) => {
     const db = getDB();
     try {
-        db.prepare('UPDATE suggestions SET status = "rejected" WHERE id = ?').run(req.params.id);
+        db.prepare("UPDATE suggestions SET status = 'rejected' WHERE id = ?").run(req.params.id);
         db.close();
         res.json({ success: true });
     } catch (e) {
@@ -558,7 +560,7 @@ app.post('/api/admin/suggestions/:id/approve', requireAdmin, (req, res) => {
         } else if (suggestion.type === 'relink') {
             // Logic handled by existing /api/relink logic but inside here
             // Simplified: just update link
-            const info = db.prepare(`
+            db.prepare(`
             UPDATE messages 
             SET link_question_id = ?, link_confidence = 1.0, link_method = 'manual_admin'
             WHERE id = ?
@@ -566,7 +568,7 @@ app.post('/api/admin/suggestions/:id/approve', requireAdmin, (req, res) => {
         }
 
         // Update Suggestion status
-        db.prepare('UPDATE suggestions SET status = "approved" WHERE id = ?').run(req.params.id);
+        db.prepare("UPDATE suggestions SET status = 'approved' WHERE id = ?").run(req.params.id);
 
         db.close();
         invalidateCache();
