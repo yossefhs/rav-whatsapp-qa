@@ -109,6 +109,29 @@ function sendError(res, error) {
 // =============================================================================
 
 /**
+ * Analyse et reformule la question
+ */
+async function analyzeAndRefineQuery(question) {
+    if (!openai) return question;
+    try {
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: `Tu es un expert en recherche. Reformule la question pour maximiser la pertinence (mots clés hébreux, précision). Retourne uniquement la question.`
+                },
+                { role: 'user', content: question }
+            ],
+            temperature: 0.3
+        });
+        return completion.choices[0].message.content.trim();
+    } catch (e) {
+        return question;
+    }
+}
+
+/**
  * Stream simple response (SIMPLE_FACT)
  */
 async function streamSimpleResponse(res, query, sources) {
@@ -132,7 +155,9 @@ async function streamSimpleResponse(res, query, sources) {
                     role: 'system',
                     content: `Tu es un assistant halakhique. Réponds de façon CONCISE et DIRECTE.
 Utilise UNIQUEMENT les sources fournies. Cite [Source X] si pertinent.
-Si la réponse n'est pas dans les sources, dis-le.`
+Si la réponse n'est pas dans les sources, dis-le.
+
+CLARIFICATION: Si la question est ambiguë, demande précision.`
                 },
                 {
                     role: 'user',
@@ -176,6 +201,11 @@ async function streamComplexResponse(res, query, sources) {
                 {
                     role: 'system',
                     content: `Tu es un assistant expert en Halakha basé sur les enseignements du Rav Abichid.
+
+DIRECTIVE IMPORTANTE: CLARIFICATION
+Si la question est vague, ambiguë, ou si les sources parlent de sujets différents :
+1. Mentionne les interprétations possibles.
+2. DEMANDE explicitement à l'utilisateur de préciser sa pensée (ex: "Parlez-vous de X ou de Y ?").
 
 MÉTHODE "CHAIN OF THOUGHT" - Tu DOIS suivre ces étapes:
 
@@ -232,6 +262,14 @@ async function handleStreamingRequest(req, res, query) {
 
     // Send initial connection event
     sendMeta(res, { status: 'connected', query });
+
+    // 0. REFINE QUERY (Auto-Correction)
+    sendMeta(res, { step: 'Reformulation...' });
+    const refined = await analyzeAndRefineQuery(query);
+    if (refined && refined !== query) {
+        console.log(`✨ Refined: "${query}" -> "${refined}"`);
+        query = refined;
+    }
 
     // ===================
     // Step 1: Classify Intent
