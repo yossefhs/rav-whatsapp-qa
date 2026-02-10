@@ -117,7 +117,7 @@ async function streamSimpleResponse(res, query, sources) {
         return;
     }
 
-    const context = sources.slice(0, 3).map((s, i) =>
+    const context = sources.slice(0, 5).map((s, i) =>
         `[Source ${i + 1}]: ${s.question}\nRéponse: ${s.answer}`
     ).join('\n\n');
 
@@ -279,7 +279,7 @@ async function handleStreamingRequest(req, res, query) {
     sendMeta(res, { step: 'searching' });
     let sources = [];
     try {
-        const limit = classification.intent === ROUTER_INTENT.COMPLEX_ANALYSIS ? 5 : 3;
+        const limit = classification.intent === ROUTER_INTENT.COMPLEX_ANALYSIS ? 7 : 5;
 
         // V2 SEARCH: Qdrant Retrieval
         console.log(`🔍 Qdrant Search for: "${query}" (Limit: ${limit})`);
@@ -351,7 +351,7 @@ async function handleStreamingRequest(req, res, query) {
     sendMeta(res, {
         step: 'found',
         sourcesCount: sources.length,
-        sources: sources.slice(0, 3).map(s => ({
+        sources: sources.slice(0, 5).map(s => ({
             id: s.id,
             question: s.question,
             answer: s.answer,
@@ -369,7 +369,7 @@ async function handleStreamingRequest(req, res, query) {
     if (!openai) {
         // Fallback: no streaming, return raw sources
         const fallback = sources.length > 0
-            ? `Voici ce que j'ai trouvé:\n\n${sources.slice(0, 3).map(s => `**Q:** ${s.question}\n**R:** ${s.answer}`).join('\n\n---\n\n')}`
+            ? `Voici ce que j'ai trouvé:\n\n${sources.slice(0, 5).map(s => `**Q:** ${s.question}\n**R:** ${s.answer}`).join('\n\n---\n\n')}`
             : "Aucun résultat trouvé.";
         sendChunk(res, fallback);
     } else if (classification.intent === ROUTER_INTENT.SIMPLE_FACT) {
