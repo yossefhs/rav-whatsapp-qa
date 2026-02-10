@@ -104,6 +104,12 @@ Tu ne dois répondre qu'en utilisant EXCLUSIVEMENT les extraits de texte fournis
 - Si les sources sont contradictoires : mentionne-le.
 - Cite tes sources avec [Source X].
 
+DIRECTIVE SECONDAIRE: CLARIFICATIONS
+Si la question de l'utilisateur est trop vague, ambiguë, ou si plusieurs sujets différents ressortent des sources :
+1. Mentionne les différentes interprétations possibles basées sur les sources.
+2. Demande explicitement à l'utilisateur de préciser sa pensée pour affiner la réponse (ex: "Faites-vous référence à X ou à Y ?").
+Privilégie la précision à une réponse trop générique.
+
 RÈGLES STRICTES:
 1. Ne JAMAIS inventer de halakha ou ajouter d'informations externes.
 2. Utilise un ton respectueux, direct et précis.
@@ -191,8 +197,8 @@ Retourne UNIQUEMENT la nouvelle question reformulée, sans guillemets ni intro.`
 async function askAssistant(question, options = {}) {
 
     const startTime = Date.now();
-    // FORCE LIMIT TO 3 to ensure synchronization with UI
-    const limit = 3;
+    // FORCE LIMIT TO 5 (Increased from 3)
+    const limit = options.limit || 5;
 
     // 0. (NOUVEAU) Refiner la question avec GPT pour mieux chercher
     const refinedQuery = await analyzeAndRefineQuery(question);
@@ -204,7 +210,7 @@ async function askAssistant(question, options = {}) {
         return {
             success: false,
             question,
-            answer: "Je n'ai pas trouvé de réponses similaires dans la base de données du Rav Abichid.",
+            answer: "Je n'ai pas trouvé de réponses similaires dans la base de données du Rav Abichid. Pourriez-vous reformuler votre question ?",
             disclaimer: "⚠️ Veuillez poser votre question directement au Rav Abichid.",
             sources: [],
             confidence: 0,
@@ -214,6 +220,7 @@ async function askAssistant(question, options = {}) {
 
     // 2. Générer une réponse avec GPT
     const { answer, sourcesUsed } = await generateAnswer(question, sources);
+
 
     // 3. Calculer la confiance moyenne
     const avgScore = sourcesUsed.length > 0

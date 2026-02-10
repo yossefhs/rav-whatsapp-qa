@@ -127,21 +127,64 @@ if (process.env.ENABLE_BOT === 'true') {
 
 app.use(express.static(path.join(__dirname, 'public')));
 const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
-// Audio Middleware: Fallback .ogg -> .mp3
+// Audio Middleware: Fallback .ogg -> .mp3 AND RAV_ABICHID_DB Lookup
+const ravDb = require('./rav_db_integration');
+// Load index asynchronously on start
+setTimeout(() => ravDb.loadIndex(), 1000);
+
 app.use('/audio', (req, res, next) => {
     // If request is for .ogg or .opus, check if we have .mp3 instead
     if (req.path.endsWith('.ogg') || req.path.endsWith('.opus')) {
         const originalPath = path.join(MEDIA_DIR, req.path);
-        // If file doesn't exist...
-        if (!fs.existsSync(originalPath)) {
-            const mp3Path = originalPath.replace(/\.(ogg|opus)$/, '.mp3');
-            // ...but .mp3 does, serve it!
-            if (fs.existsSync(mp3Path)) {
-                // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
-                return res.sendFile(mp3Path);
-            }
+
+        // 1. Check local file (handled by next static middleware if exists? No, express.static is below)
+        // Actually, we are BEFORE express.static so we can intercept.
+
+        // Local existence check
+        if (fs.existsSync(originalPath)) {
+            return next(); // Let static serve it
+        }
+
+        // 2. Check local .mp3 fallback
+        const mp3Path = originalPath.replace(/\.(ogg|opus)$/, '.mp3');
+        if (fs.existsSync(mp3Path)) {
+            // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
+            return res.sendFile(mp3Path);
+        }
+
+        // 3. Check RAV_ABICHID_DB (Smart Fallback)
+        const filename = path.basename(req.path);
+        const externalPath = ravDb.findFilePath(filename);
+        if (externalPath && fs.existsSync(externalPath)) {
+            console.log(`🔍 Serving from RAV_DB: ${filename}`);
+            return res.sendFile(externalPath);
+        }
+
+        // If still not found, try finding .mp3 version in RAV_DB?
+        // (If DB has .mp3 but request was .opus)
+        const mp3Filename = filename.replace(/\.(ogg|opus)$/, '.mp3');
+        const externalMp3Path = ravDb.findFilePath(mp3Filename);
+        if (externalMp3Path && fs.existsSync(externalMp3Path)) {
+            console.log(`🔍 Serving MP3 from RAV_DB: ${mp3Filename}`);
+            return res.sendFile(externalMp3Path);
         }
     }
+
+    // If not special case, or not found yet, let static try (it will 404 if not found)
+    // But wait, express.static handles normal files.
+    // If we want to catch ALL missing audio, we should do this fallback logic for ANY audio request.
+
+    // Let's broaden the scope: if expected file is missing locally, check RAV_DB.
+    const requestedPath = path.join(MEDIA_DIR, req.path);
+    if (!fs.existsSync(requestedPath)) {
+        const filename = path.basename(req.path);
+        const externalPath = ravDb.findFilePath(filename);
+        if (externalPath && fs.existsSync(externalPath)) {
+            console.log(`🔍 Serving from RAV_DB: ${filename}`);
+            return res.sendFile(externalPath);
+        }
+    }
+
     next();
 });
 
