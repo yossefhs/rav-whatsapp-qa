@@ -98,10 +98,11 @@ function filterQuery(query) {
 // =============================================================================
 
 const WEIGHTS = {
-    vectorScore: 0.40,    // Score similarité Qdrant
-    thematicScore: 0.25,  // Match catégorie halakhique
-    qualityScore: 0.20,   // Qualité réponse (longueur, sources)
-    recencyScore: 0.15    // Récence de la réponse
+    vectorScore: 0.50,    // Score similarité vectorielle (Priorité absolue)
+    feedbackScore: 0.10,  // Score basé sur les retours utilisateurs
+    thematicScore: 0.25,  // Mots-clés exacts
+    qualityScore: 0.10,   // Qualité de la réponse
+    recencyScore: 0.05    // Récence
 };
 
 /**
@@ -110,6 +111,7 @@ const WEIGHTS = {
 function calculateConfidence(result, query) {
     const scores = {
         vector: result.score || 0,
+        feedback: result.feedback_score || 0.5, // Par défaut neutre
         thematic: 0,
         quality: 0,
         recency: 0
@@ -146,6 +148,7 @@ function calculateConfidence(result, query) {
     // Score final pondéré
     const finalScore = (
         WEIGHTS.vectorScore * scores.vector +
+        WEIGHTS.feedbackScore * scores.feedback + // L'IA écoute l'humain
         WEIGHTS.thematicScore * scores.thematic +
         WEIGHTS.qualityScore * scores.quality +
         WEIGHTS.recencyScore * scores.recency
@@ -170,7 +173,7 @@ function calculateConfidence(result, query) {
 // =============================================================================
 
 const MIN_RESPONSE_LENGTH = 30;
-const MIN_VECTOR_SCORE = 0.35;
+const MIN_VECTOR_SCORE = 0.45; // Augmenté pour garantir une pertinence très stricte
 
 /**
  * Valide et filtre la réponse
