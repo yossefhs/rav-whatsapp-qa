@@ -1722,11 +1722,11 @@
                 // We always need to extract just the filename and build the proper /audio/filename.mp3 URL.
                 let audioSrc = s.audio_url || s.audio_path || s.audioUrl;
                 if (audioSrc) {
-                    if (audioSrc.startsWith('http')) {
-                        // Already a full HTTP URL — keep as-is but normalise extension
+                    if (audioSrc.startsWith('http') || audioSrc.startsWith('/audio-b2/') || audioSrc.startsWith('/audio/')) {
+                        // Already a proper URL or route — keep as-is but normalise extension
                         audioSrc = audioSrc.replace(/\.(ogg|opus)$/i, '.mp3');
                     } else {
-                        // Filesystem path or relative path — always extract just the filename
+                        // Filesystem path — always extract just the filename and use legacy /audio/ route
                         const filename = audioSrc.split('/').pop().replace(/\.(ogg|opus)$/i, '.mp3');
                         audioSrc = `/audio/${filename}`;
                     }
