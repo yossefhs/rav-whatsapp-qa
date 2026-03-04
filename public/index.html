@@ -1290,7 +1290,8 @@
                     </div>
                     <div class="modal-audio" id="modalAudioSection" style="display:none;">
                         <div class="modal-label">🎵 Audio</div>
-                        <audio controls preload="metadata" playsinline id="modalAudioPlayer"></audio>
+                        <audio controls preload="metadata" playsinline id="modalAudioPlayer"
+                            onerror="this.parentElement.innerHTML = '<span style=\\'font-size:1.2em;\\'>⚠️</span> <span style=\\'color:var(--danger); font-size:14px; margin-top:10px; display:inline-block;\\'>Audio au format OGG non supporté par Safari/Apple. Veuillez utiliser Chrome pour macOS/iOS.</span>'"></audio>
                     </div>
                     <div class="modal-meta" id="modalMeta"></div>
 
@@ -1604,6 +1605,7 @@
                     let buffer = '';
                     let fullText = '';
                     let sources = [];
+                    let topicSpan = null;
 
                     while (true) {
                         const { done, value } = await reader.read();
@@ -1638,10 +1640,14 @@
 
                                     if (data.sources) sources = data.sources;
 
+                                    if (data.topic) {
+                                        topicSpan = data.topic;
+                                    }
+
                                     if (data.duration) {
-                                        statusDiv.textContent = `✅ Terminé en ${data.duration}ms`;
+                                        statusDiv.innerHTML = `✅ Terminé en ${(data.duration / 1000).toFixed(1)}s`;
                                         setTimeout(() => statusDiv.style.opacity = '0.5', 2000);
-                                        updateMeta(data.confidence, data.sourcesUsed || sources.length);
+                                        updateMeta(data.confidence, data.sourcesUsed || sources.length, topicSpan);
                                         // Add sources validation buttons
                                         appendFeedback(card, sources);
                                         // Display Sources with Audio & Transcript
@@ -1711,33 +1717,38 @@
                 div.style.cssText = 'opacity: 0.9; scale: 0.98; margin-bottom: 15px; animation: slideIn 0.3s ease-out; animation-fill-mode: both; animation-delay: ' + (index * 100) + 'ms;';
                 div.style.cursor = 'pointer';
 
+                // AUDIO LOGIC
+                // audio_path in the DB is an absolute filesystem path like /Users/admin/.../media/file.ogg
+                // We always need to extract just the filename and build the proper /audio/filename.mp3 URL.
+                let audioSrc = s.audio_url || s.audio_path || s.audioUrl;
+                if (audioSrc) {
+                    if (audioSrc.startsWith('http')) {
+                        // Already a full HTTP URL — keep as-is but normalise extension
+                        audioSrc = audioSrc.replace(/\.(ogg|opus)$/i, '.mp3');
+                    } else {
+                        // Filesystem path or relative path — always extract just the filename
+                        const filename = audioSrc.split('/').pop().replace(/\.(ogg|opus)$/i, '.mp3');
+                        audioSrc = `/audio/${filename}`;
+                    }
+                }
+
                 div.addEventListener('click', (e) => {
                     if (e.target.closest('button') || e.target.closest('audio')) return;
-                    // Compatibility with existing openModal
                     openModal({
                         id: s.id,
                         question: s.question,
                         answer: s.answer,
-                        audioUrl: s.audio_url || s.audio_path || s.audioUrl,
+                        audioUrl: audioSrc,
                         date: s.timestamp ? new Date(s.timestamp).toLocaleDateString() : 'Date inconnue',
                         similarity: s.score ? Math.round(s.score * 100) : 0
                     });
                 });
 
-                // AUDIO LOGIC
-                // Fix path if needed (if it comes as raw filename or full path)
-                let audioSrc = s.audio_url || s.audio_path || s.audioUrl;
-                if (audioSrc && !audioSrc.startsWith('http') && !audioSrc.startsWith('/')) {
-                    // Assume it's a filename in /audio/ dir
-                    // Remove 'media/' prefix if present
-                    const filename = audioSrc.split('/').pop();
-                    audioSrc = `/audio/${filename}`;
-                }
-
                 let audioHtml = audioSrc ?
-                    `<div class="modal-audio" style="margin-top:10px; display:flex; align-items:center; gap:10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px;">
+                    `<div class="modal-audio" style="margin-top:10px; display:flex; align-items:center; gap:10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px; position:relative;">
                         <span style="font-size: 1.2em;">🎧</span>
-                        <audio controls preload="none" playsinline src="${audioSrc}" style="flex:1; height: 32px;"></audio>
+                        <audio controls preload="none" playsinline src="${audioSrc}" style="flex:1; height: 32px;"
+                               onerror="this.parentElement.innerHTML = '<span style=\\'font-size:1.2em;\\'>⚠️</span> <span style=\\'color:var(--danger); font-size:12px;\\'>Audio au format OGG non supporté par Safari/Apple. Veuillez utiliser Chrome.</span>'"></audio>
                      </div>` : '';
 
                 div.innerHTML = `
@@ -1784,6 +1795,8 @@
             return text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Format Sefaria citations (e.g., [Sefaria: Berakhot 40a])
+                .replace(/\[Sefaria([^\]]*)\]/gi, '<span style="background: rgba(99,102,241,0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 500; font-size: 0.9em;">📚 Sefaria$1</span>')
                 .replace(/\n/g, '<br>');
         }
 
@@ -1815,7 +1828,10 @@
                      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <div>
                             <span class="meta-confidence" style="font-size: 0.9em; color: var(--accent);"></span>
-                            <span class="meta-sources" style="font-size: 0.9em;"></span>
+                            <span class="meta-sources" style="font-size: 0.9em; margin-left: 8px;"></span>
+                        </div>
+                        <div class="meta-topic-container" style="display: none;">
+                            <span class="meta-topic-pill" style="background: rgba(99, 102, 241, 0.1); color: var(--accent); padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(99, 102, 241, 0.2);"></span>
                         </div>
                     </div>
                 </div>
@@ -1824,10 +1840,22 @@
             const contentDiv = card.querySelector('.result-answer');
             const statusDiv = card.querySelector('.streaming-status');
             const metaDiv = card.querySelector('.result-meta');
+            const topicContainer = card.querySelector('.meta-topic-container');
+            const topicPill = card.querySelector('.meta-topic-pill');
 
-            const updateMeta = (confidence, count) => {
-                card.querySelector('.meta-confidence').textContent = confidence ? `Confiance: ${confidence}%` : '';
+            const updateMeta = (confidence, count, topic) => {
+                let confText = confidence ? `Confiance: Haute` : '';
+                if (confidence && confidence < 75) confText = `Confiance: Moyenne`;
+                if (confidence && confidence < 50) confText = `Confiance: Basse`;
+
+                card.querySelector('.meta-confidence').textContent = confText;
                 card.querySelector('.meta-sources').textContent = count ? `• ${count} sources utilisées` : '';
+
+                if (topic && topic !== 'general') {
+                    topicPill.textContent = topic;
+                    topicContainer.style.display = 'block';
+                }
+
                 metaDiv.style.opacity = '1';
             };
 

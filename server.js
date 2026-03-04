@@ -125,34 +125,111 @@ if (process.env.ENABLE_BOT === 'true') {
     console.log('ℹ️ Bot désactivé (ENABLE_BOT != true) - Mode API/Web uniquement');
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+            // Force browser to always check for the newest version of index.html
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 const MEDIA_DIR = process.env.MEDIA_DIR ? path.resolve(process.env.MEDIA_DIR) : path.join(__dirname, 'media');
 // Audio Middleware: Fallback .ogg -> .mp3 AND RAV_ABICHID_DB Lookup
+const { spawn } = require('child_process');
+const FFMPEG_BIN = '/usr/local/bin/ffmpeg';
+
+/**
+ * Stream any audio file (OGG, Opus, etc.) transcoded to MP3 on-the-fly.
+ * Uses the system ffmpeg binary — no npm package required.
+ */
+function streamAsMp3(res, sourcePath) {
+    console.log(`🎵 [FFMPEG] Transcoding to MP3: ${path.basename(sourcePath)}`);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    // No Content-Length as we are streaming live — seeking is limited but playback works.
+
+    const args = [
+        '-i', sourcePath,
+        '-f', 'mp3',
+        '-acodec', 'libmp3lame',
+        '-q:a', '4',   // Good-quality VBR
+        'pipe:1'       // Output to stdout
+    ];
+
+    const proc = spawn(FFMPEG_BIN, args, { stdio: ['ignore', 'pipe', 'ignore'] });
+    proc.stdout.pipe(res);
+
+    proc.on('error', (err) => {
+        console.error(`❌ [FFMPEG] Error: ${err.message}`);
+        if (!res.headersSent) res.status(500).send('Transcoding error');
+    });
+
+    res.on('close', () => {
+        // Client disconnected — cleanly kill ffmpeg
+        if (!proc.killed) proc.kill();
+    });
+}
+
 const ravDb = require('./rav_db_integration');
 // Load index asynchronously on start
 setTimeout(() => ravDb.loadIndex(), 1000);
 
 app.use('/audio', (req, res, next) => {
-    // If request is for .ogg or .opus, check if we have .mp3 instead
-    if (req.path.endsWith('.ogg') || req.path.endsWith('.opus')) {
+    // 0. SAFARI FIX: Safari refuses to load .ogg in <audio> tags. Redirect strictly to .mp3 so the browser tries the MP3 payload
+    if (req.path.match(/\.(ogg|opus)$/i)) {
+        const mp3Path = req.originalUrl.replace(/\.(ogg|opus)$/i, '.mp3');
+        // console.log(`🔄 Redirecting ${req.originalUrl} to ${mp3Path} for Safari compatibility.`);
+        return res.redirect(301, mp3Path);
+    }
+
+    // 1. If request is for .mp3, check local and RAV_DB, then fallback to .ogg/.opus
+    if (req.path.endsWith('.mp3')) {
+        const originalPath = path.join(MEDIA_DIR, req.path);
+        if (fs.existsSync(originalPath)) return next();
+
+        const filename = path.basename(req.path);
+
+        // Check local .ogg first — transcode to real MP3 for Safari compatibility
+        const localOggPath = path.join(MEDIA_DIR, filename.replace(/\.mp3$/, '.ogg'));
+        if (fs.existsSync(localOggPath)) {
+            return streamAsMp3(res, localOggPath);
+        }
+
+        // Check local .opus — transcode to real MP3 for Safari compatibility
+        const localOpusPath = path.join(MEDIA_DIR, filename.replace(/\.mp3$/, '.opus'));
+        if (fs.existsSync(localOpusPath)) {
+            return streamAsMp3(res, localOpusPath);
+        }
+
+        const externalPath = ravDb.findFilePath(filename);
+        if (externalPath && fs.existsSync(externalPath)) {
+            console.log(`🔍 Serving native MP3 from RAV_DB: ${filename}`);
+            return res.sendFile(externalPath);
+        }
+
+        const oggFilename = filename.replace(/\.mp3$/, '.ogg');
+        const oggPath = ravDb.findFilePath(oggFilename);
+        if (oggPath && fs.existsSync(oggPath)) {
+            return streamAsMp3(res, oggPath);
+        }
+
+        const opusFilename = filename.replace(/\.mp3$/, '.opus');
+        const opusPath = ravDb.findFilePath(opusFilename);
+        if (opusPath && fs.existsSync(opusPath)) {
+            return streamAsMp3(res, opusPath);
+        }
+    }
+
+    // 2. If request is for .ogg or .opus, check if we have .mp3 instead (Should be caught by redirect, but safety net)
+    if (req.path.match(/\.(ogg|opus)$/i)) {
         const originalPath = path.join(MEDIA_DIR, req.path);
 
-        // 1. Check local file (handled by next static middleware if exists? No, express.static is below)
-        // Actually, we are BEFORE express.static so we can intercept.
+        if (fs.existsSync(originalPath)) return next();
 
-        // Local existence check
-        if (fs.existsSync(originalPath)) {
-            return next(); // Let static serve it
-        }
+        const mp3Path = originalPath.replace(/\.(ogg|opus)$/i, '.mp3');
+        if (fs.existsSync(mp3Path)) return res.sendFile(mp3Path);
 
-        // 2. Check local .mp3 fallback
-        const mp3Path = originalPath.replace(/\.(ogg|opus)$/, '.mp3');
-        if (fs.existsSync(mp3Path)) {
-            // console.log(`🔄 Serving MP3 fallback for: ${req.path}`);
-            return res.sendFile(mp3Path);
-        }
-
-        // 3. Check RAV_ABICHID_DB (Smart Fallback)
         const filename = path.basename(req.path);
         const externalPath = ravDb.findFilePath(filename);
         if (externalPath && fs.existsSync(externalPath)) {
@@ -160,9 +237,7 @@ app.use('/audio', (req, res, next) => {
             return res.sendFile(externalPath);
         }
 
-        // If still not found, try finding .mp3 version in RAV_DB?
-        // (If DB has .mp3 but request was .opus)
-        const mp3Filename = filename.replace(/\.(ogg|opus)$/, '.mp3');
+        const mp3Filename = filename.replace(/\.(ogg|opus)$/i, '.mp3');
         const externalMp3Path = ravDb.findFilePath(mp3Filename);
         if (externalMp3Path && fs.existsSync(externalMp3Path)) {
             console.log(`🔍 Serving MP3 from RAV_DB: ${mp3Filename}`);
@@ -185,7 +260,9 @@ app.use('/audio', (req, res, next) => {
         }
     }
 
-    next();
+    // CRITICAL: Do NOT call next() for /audio routes if the file is truly completely missing.
+    // Otherwise, the React catch-all `app.get('*')` will serve index.html as an audio file, breaking the browser player.
+    return res.status(404).send('Audio file not found in local media or RAV_DB');
 });
 
 app.use('/audio', express.static(MEDIA_DIR));

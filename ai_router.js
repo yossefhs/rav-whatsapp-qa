@@ -230,10 +230,12 @@ Retourne UNIQUEMENT la nouvelle question reformulée.`
 // RESPONSE GENERATION
 // =============================================================================
 
+const { getSefariaTopicSources, getSefariaText } = require('./sefaria');
+
 /**
- * Génère une réponse simple basée sur les sources RAG
+ * Génère une réponse simple basée sur les sources RAG et Sefaria
  */
-async function generateSimpleResponse(query, sources) {
+async function generateSimpleResponse(query, sources, sefariaContext = "") {
     if (!sources || sources.length === 0) {
         return "Je n'ai pas trouvé d'information précise sur ce sujet dans les archives du Rav Abichid.";
     }
@@ -243,6 +245,11 @@ async function generateSimpleResponse(query, sources) {
         `[Source ${i + 1}]: ${s.question}\nRéponse: ${s.answer}`
     ).join('\n\n');
 
+    let fullContext = context;
+    if (sefariaContext) {
+        fullContext += `\n\n=== CONTEXTE SEFARIA ===\n${sefariaContext}`;
+    }
+
     const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         temperature: 0.3,
@@ -251,12 +258,12 @@ async function generateSimpleResponse(query, sources) {
             {
                 role: 'system',
                 content: `Tu es un assistant halakhique. Réponds de façon CONCISE et DIRECTE.
-Utilise UNIQUEMENT les sources fournies. Cite [Source X] si pertinent.
-Si la réponse n'est pas dans les sources, dis-le.`
+Utilise l'encadrement Sefaria uniquement pour comprendre le sujet, mais la RÉPONSE FINALE doit venir EXCLUSIVEMENT des Archives Rav Abichid fournies.
+Cite [Source X] (Rav) prioritairement. Si la réponse précise n'est pas dans les archives du Rav, dis-le clairement et donne la réponse Sefaria "sous réserve de demander au Rav".`
             },
             {
                 role: 'user',
-                content: `Question: ${query}\n\nSOURCES:\n${context}\n\nRéponds en 2-3 phrases maximum.`
+                content: `Question: ${query}\n\nSOURCES:\n${fullContext}\n\nRéponds en 2-3 phrases maximum.`
             }
         ]
     });
@@ -267,7 +274,7 @@ Si la réponse n'est pas dans les sources, dis-le.`
 /**
  * Génère une réponse complexe avec Chain-of-Thought
  */
-async function generateComplexResponse(query, sources) {
+async function generateComplexResponse(query, sources, sefariaContext = "") {
     if (!sources || sources.length === 0) {
         return {
             answer: "Cette question nécessite une analyse approfondie que je ne peux pas effectuer sans sources pertinentes. Veuillez consulter le Rav Abichid directement.",
@@ -280,6 +287,11 @@ async function generateComplexResponse(query, sources) {
         `[Source ${i + 1}] (Score: ${(s.score * 100).toFixed(0)}%):\nQ: ${s.question}\nR: ${s.answer}`
     ).join('\n\n---\n\n');
 
+    let fullContext = context;
+    if (sefariaContext) {
+        fullContext += `\n\n=== CONTEXTE SEFARIA ===\n${sefariaContext}`;
+    }
+
     const response = await openai.chat.completions.create({
         // ULTRA INTELLIGENT MODE: Uses GPT-4o for maximum reasoning capability
         model: 'gpt-4o',
@@ -288,33 +300,28 @@ async function generateComplexResponse(query, sources) {
         messages: [
             {
                 role: 'system',
-                content: `Tu es un Expert Décisionnaire en Halakha (Posqim), basé EXCLUSIVEMENT sur les enseignements du Rav Abichid.
-Ton objectif est de fournir une réponse d'une précision chirurgicale ("Ultra Intelligent").
+                content: `Tu es un Expert Décisionnaire en Halakha (Posqim), basé EXCLUSIVEMENT sur les enseignements et la base de données du Rav Abichid. Ton objectif est de fournir une réponse d'une précision chirurgicale ("Ultra Intelligent") issue principalement du Rav.
 
-RÈGLES D'OR :
-1. **FIDÉLITÉ ABSOLUE** : Ne dis jamais rien qui ne soit pas explicitement soutenu par les sources fournies.
-2. **NUANCE & PRÉCISION** : Si deux sources semblent se contredire, analyse pourquoi (contexte différent ? cas différent ?). Ne simplifie pas à outrance.
-3. **TRANSPARENCE** : Si une information manque pour trancher, dis-le clairement.
+📖 **RÈGLE CRUCIALE SUR SEFARIA** : 
+Sefaria ne doit servir QU'À T'AIDER à analyser et comprendre la question (définir les termes, donner un bref contexte). La décision finale (Psak) DOIT TOUJOURS VENIR DE LA BASE DE DONNÉES DU RAV ABICHID si elle existe.
 
 MÉTHODE DE RAISONNEMENT (Chain of Thought) :
-1. **DÉCONSTRUCTION** : Analyse la question sous tous ses angles (halakhiques, pratiques).
-2. **EXTRACTION** : Pour chaque point, identifie la source exacte (ex: [Source 2]).
-3. **SYNTHÈSE LOGIQUE** : Construis la réponse étape par étape.
-4. **CONCLUSION PRATIQUE** : Termine par une décision claire (Assour/Moutar/Disctinction).
+1. **DÉCONSTRUCTION (Sefaria pour Info)** : Analyse la question sous tous ses angles. Utilise Sefaria rapidement pour citer le contexte général halakhique.
+2. **EXTRACTION DU PSAK (Le Cœur)** : Identifie la source exacte dans la base du Rav Abichid. (ex: Selon le [Rav Abichid - Source 2]...).
+3. **CONCLUSION** : 
+   - SI le Rav Abichid a répondu → Conclure toujours d'après ses réponses.
+   - SI aucune réponse directe du Rav → Conclure d'après Sefaria, MAIS mentionner: "Sous réserve de demander au Rav car nos archives ne contiennent pas sa réponse exacte ici."
 
 FORMAT DE RÉPONSE ATTENDU :
-📋 **Analyse** : [Résumé du cas halakhique]
-📖 **Étude des Sources** : 
-  - Selon [Source X], ...
-  - En revanche/De même, [Source Y] précise que ...
-⚖️ **Raisonnement** : [Ton analyse des sources pour ce cas précis]
-✅ **Halakha Pratique** : [Conclusion directe et applicable]
+📋 **Compréhension du cas** : [Résumé rapide + Contexte Sefaria concis]
+📖 **Psak du Rav Abichid** : [Les réponses tirées des sources du Rav]
+✅ **Conclusion** : [Décision applicable d'après le Rav, ou mise en garde d'après Sefaria]
 
-⚠️ Termine TOUJOURS par : "En cas de doute, ou pour des cas complexes non couverts ici, consultez le Rav Abichid."`
+⚠️ Termine TOUJOURS par : "En cas de doute ou pour des cas complexes non couverts ici, consultez le Rav Abichid."`
             },
             {
                 role: 'user',
-                content: `Question: ${query}\n\n=== SOURCES RÉFÉRENCES (RAV ABICHID) ===\n${context}`
+                content: `Question: ${query}\n\n=== SOURCES RÉFÉRENCES ===\n${fullContext}`
             }
         ]
     });
@@ -400,7 +407,45 @@ async function routeAndAnswer(userQuery) {
     stats.sourcesFound = sources.length;
 
     // ===================
-    // Step 5: Generate Response based on Intent
+    // Step 5: Sefaria Enrichment
+    // ===================
+    const sefariaStart = Date.now();
+    let sefariaContext = "";
+
+    if (openai && (classification.intent === ROUTER_INTENT.SIMPLE_FACT || classification.intent === ROUTER_INTENT.COMPLEX_ANALYSIS)) {
+        try {
+            // Find Halakhic topic slug
+            const topicResponse = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Extract the main Halakhic topic from the question in ONE SINGLE ENGLISH WORD (e.g. "shabbat", "kashrut", "niddah", "kiddush", "tefillah"). If none applies directly, output "general".`
+                    },
+                    { role: 'user', content: userQuery }
+                ],
+                temperature: 0,
+                max_tokens: 10
+            });
+            const slug = topicResponse.choices[0].message.content.trim().toLowerCase();
+
+            if (slug !== 'general') {
+                console.log(`📚 Sefaria Topic identified: ${slug}`);
+                const refs = await getSefariaTopicSources(slug);
+                if (refs && refs.length > 0) {
+                    // Fetch text for the first 2 primary sources to keep context size manageable
+                    const texts = await Promise.all(refs.slice(0, 2).map(r => getSefariaText(r)));
+                    sefariaContext = texts.filter(t => t !== null).join('\n\n');
+                }
+            }
+        } catch (e) {
+            console.error('❌ Sefaria enrichment error:', e.message);
+        }
+    }
+    stats.steps.push({ name: 'sefaria_enrichment', duration: Date.now() - sefariaStart });
+
+    // ===================
+    // Step 6: Generate Response based on Intent
     // ===================
     const genStart = Date.now();
     let answer = '';
@@ -412,17 +457,17 @@ async function routeAndAnswer(userQuery) {
             ? `Voici ce que j'ai trouvé:\n\n${sources.slice(0, 5).map(s => `Q: ${s.question}\nR: ${s.answer}`).join('\n\n---\n\n')}`
             : "Aucun résultat trouvé.";
     } else if (classification.intent === ROUTER_INTENT.SIMPLE_FACT) {
-        answer = await generateSimpleResponse(userQuery, sources);
+        answer = await generateSimpleResponse(userQuery, sources, sefariaContext);
     } else {
         // COMPLEX_ANALYSIS - Use Chain of Thought
-        const complexResult = await generateComplexResponse(userQuery, sources);
+        const complexResult = await generateComplexResponse(userQuery, sources, sefariaContext);
         answer = complexResult.answer;
         reasoning = complexResult.reasoning;
     }
     stats.steps.push({ name: 'generation', duration: Date.now() - genStart });
 
     // ===================
-    // Step 6: Append Sources & Audio (Formatting for Whatsapp)
+    // Step 7: Append Sources & Audio (Formatting for Whatsapp)
     // ===================
     // Filter to used sources or all if short?
     // User request: "amene bien les reponses source ... avec l audio ... si plus que 3 amenes les toute"

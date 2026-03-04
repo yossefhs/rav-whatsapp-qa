@@ -21,17 +21,17 @@ const DB_PATH = process.env.DB_PATH || 'ravqa.db';
 // Helper: Get audio URL preferring MP3 over OGG
 function getAudioUrl(audioPath) {
     if (!audioPath) return null;
-    const basename = path.basename(audioPath); // Strip /Users/admin/...
-    const mediaDir = path.join(__dirname, 'media'); // Assume media is in same root
+    // Always extract just the filename and force .mp3 extension for Safari compatibility
+    const mp3Name = path.basename(audioPath).replace(/\.(ogg|opus)$/i, '.mp3');
 
-    // 1. Check if exact .mp3 version exists (common case)
-    const mp3Name = basename.replace(/\.(ogg|opus)$/i, '.mp3');
-    if (fs.existsSync(path.join(mediaDir, mp3Name))) {
-        return `/audio/${mp3Name}`;
+    // CLOUD MODE (Railway / production): return direct CDN URL (Backblaze B2, S3, etc.)
+    const baseUrl = process.env.MEDIA_BASE_URL;
+    if (baseUrl) {
+        return `${baseUrl.replace(/\/$/, '')}/${mp3Name}`;
     }
 
-    // 2. Fallback to original
-    return `/audio/${basename}`;
+    // LOCAL MODE: serve via Express /audio/ route (with ffmpeg fallback)
+    return `/audio/${mp3Name}`;
 }
 
 const qdrant = new QdrantClient();
@@ -131,10 +131,12 @@ async function analyzeAndRefineQuery(question) {
     }
 }
 
+const { getSefariaTopicSources, getSefariaText } = require('./sefaria');
+
 /**
  * Stream simple response (SIMPLE_FACT)
  */
-async function streamSimpleResponse(res, query, sources) {
+async function streamSimpleResponse(res, query, sources, sefariaContext = "") {
     if (!sources || sources.length === 0) {
         sendChunk(res, "Je n'ai pas trouvé d'information précise sur ce sujet dans les archives du Rav Abichid.");
         return;
@@ -144,34 +146,56 @@ async function streamSimpleResponse(res, query, sources) {
         `[Source ${i + 1}]: ${s.question}\nRéponse: ${s.answer}`
     ).join('\n\n');
 
+    let fullContext = context;
+    if (sefariaContext) {
+        fullContext += `\n\n=== CONTEXTE SEFARIA ===\n${sefariaContext}`;
+    }
+
     try {
+        console.log(`[DEBUG Stream] Requesting completion from OpenAI for streamSimpleResponse...`);
         const stream = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             temperature: 0.3,
-            max_tokens: 300,
+            max_tokens: 600,
             stream: true,
             messages: [
                 {
                     role: 'system',
-                    content: `Tu es un assistant halakhique. Réponds de façon CONCISE et DIRECTE.
-Utilise UNIQUEMENT les sources fournies. Cite [Source X] si pertinent.
-Si la réponse n'est pas dans les sources, dis-le.
+                    content: `Tu es un assistant halakhique spécialisé dans les enseignements du Rav Abichid.
 
-CLARIFICATION: Si la question est ambiguë, demande précision.`
+Tu dois TOUJOURS structurer ta réponse ainsi :
+
+**ÉTAPE 1 – Compréhension halakhique** (obligatoire, court):
+Identifie le sujet halakhique de la question. Cite brièvement (1-2 phrases) une référence Sefaria pertinente (ex: Choulhan Aroukh, etc.) pour cadrer la problématique.
+
+**ÉTAPE 2 – Psak du Rav Abichid** (obligatoire si sources disponibles):
+Cite directement les enseignements du Rav Abichid d'après les Sources fournies. C'est la réponse principale. Cite la source : "Selon le Rav Abichid [Source X]..."
+
+**ÉTAPE 3 – Conclusion** :
+- SI des sources du Rav Abichid existent : conclure d'après sa réponse.
+- SI aucune source du Rav Abichid ne couvre la question : conclure d'après Sefaria mais AJOUTER obligatoirement : "⚠️ Il n'y a pas de réponse directe du Rav Abichid sur ce sujet dans nos archives. La réponse ci-dessus est basée uniquement sur les sources générales — merci de vérifier auprès du Rav Abichid."
+
+REMARQUE: Si la question est ambiguë, demande précision AVANT de répondre.`
                 },
                 {
                     role: 'user',
-                    content: `Question: ${query}\n\nSOURCES:\n${context}\n\nRéponds en 2-3 phrases maximum.`
+                    content: `Question: ${query}\n\nSOURCES ARCHIVES RAV ABICHID:\n${fullContext}`
                 }
             ]
         });
 
+        console.log(`[DEBUG Stream] OpenAI stream successfully established. Reading chunks...`);
+        let count = 0;
         for await (const chunk of stream) {
+            count++;
+            if (count === 1) console.log(`[DEBUG Stream] First chunk received from OpenAI!`);
             const text = chunk.choices[0]?.delta?.content || '';
             if (text) {
                 sendChunk(res, text);
+                if (res.flush) res.flush(); // Force flush if supported
             }
         }
+        console.log(`[DEBUG Stream] Finished reading OpenAI stream. Total generated chunks: ${count}`);
     } catch (error) {
         console.error('❌ Stream simple error:', error.message);
         sendError(res, 'Erreur lors de la génération');
@@ -181,7 +205,7 @@ CLARIFICATION: Si la question est ambiguë, demande précision.`
 /**
  * Stream complex response with Chain-of-Thought (COMPLEX_ANALYSIS)
  */
-async function streamComplexResponse(res, query, sources) {
+async function streamComplexResponse(res, query, sources, sefariaContext = "") {
     if (!sources || sources.length === 0) {
         sendChunk(res, "Cette question nécessite une analyse approfondie que je ne peux pas effectuer sans sources pertinentes. Veuillez consulter le Rav Abichid directement.");
         return;
@@ -191,40 +215,47 @@ async function streamComplexResponse(res, query, sources) {
         `[Source ${i + 1}] (Score: ${(s.score * 100).toFixed(0)}%):\nQ: ${s.question}\nR: ${s.answer}`
     ).join('\n\n---\n\n');
 
+    let fullContext = context;
+    if (sefariaContext) {
+        fullContext += `\n\n=== CONTEXTE SEFARIA ===\n${sefariaContext}`;
+    }
+
     try {
         const stream = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            temperature: 0.4,
-            max_tokens: 800,
+            model: 'gpt-4o',
+            temperature: 0.2,
+            max_tokens: 1500,
             stream: true,
             messages: [
                 {
                     role: 'system',
-                    content: `Tu es un assistant expert en Halakha basé sur les enseignements du Rav Abichid.
+                    content: `Tu es un assistant halakhique expert, représentant exclusivement les enseignements et la base de données du Rav Abichid. Ton objectif absolu est de fournir la réponse du Rav Abichid.
 
-DIRECTIVE IMPORTANTE: CLARIFICATION
-Si la question est vague, ambiguë, ou si les sources parlent de sujets différents :
-1. Mentionne les interprétations possibles.
-2. DEMANDE explicitement à l'utilisateur de préciser sa pensée (ex: "Parlez-vous de X ou de Y ?").
+---
 
-MÉTHODE "CHAIN OF THOUGHT" - Tu DOIS suivre ces étapes:
+📖 **RÈGLE CRUCIALE SUR SEFARIA** : 
+Sefaria ne doit servir QU'À T'AIDER à analyser et comprendre la question (définir les termes, donner un bref contexte halakhique). La réponse finale et le Psak (décision) DOIVENT TOUJOURS ÊTRE PRINCIPALEMENT TIRÉS DE LA BASE DE DONNÉES DU RAV ABICHID.
 
-1. **ANALYSE**: Identifie les éléments clés de la question (sujet, contexte, cas particulier)
-2. **SOURCES**: Cite les sources pertinentes [Source X] et leur enseignement
-3. **COMPARAISON**: Si les sources diffèrent, explique les nuances
-4. **CONCLUSION**: Donne la réponse pratique
+---
 
-FORMAT OBLIGATOIRE:
-📋 **Analyse de la question**: [ton analyse]
-📖 **Sources consultées**: [citations]
-⚖️ **Raisonnement**: [comparaison si nécessaire]
-✅ **Réponse**: [conclusion pratique]
+📚 Tu dois TOUJOURS structurer ta réponse ainsi :
 
-⚠️ Termine TOUJOURS par: "En cas de doute, consultez le Rav Abichid."`
+**1. COMPRÉHENSION DE LA QUESTION (Sefaria pour Info - Très Court)**:
+Cite rapidement le contexte halakhique de la question grâce aux sources Sefaria pour expliquer de quoi on parle (Rishonim, Choulhan Aroukh, etc.).
+
+**2. LE PSAK DU RAV ABICHID (Le Corps de la Réponse)**:
+Amène la réponse directement d'après les [Sources] de la base de données du Rav Abichid.
+Cite le Rav et explique sa position. Distingue clairement Ashkénazim/Séfaradim si le Rav le précise.
+
+**3. CONCLUSION DÉFINITIVE** :
+- **Si le Rav Abichid a répondu** → Conclure UNIQUEMENT et TOUJOURS d'après les réponses du Rav.
+- **Si aucune réponse du Rav dans les archives** → Conclure brièvement d'après le contexte Sefaria, MAIS tu dois OBLIGATOIREMENT mentionner : "Sous réserve de demander au Rav Abichid, car nous n'avons pas d'archives directes sur ce cas précis."
+
+⚠️ Termine TOUJOURS ta réponse par : "En cas de doute ou pour un cas précis, posez la question directement au Rav Abichid."`
                 },
                 {
                     role: 'user',
-                    content: `Question: ${query}\n\n=== SOURCES DISPONIBLES ===\n${context}`
+                    content: `Question: ${query}\n\n=== SOURCES DISPONIBLES ===\n${fullContext}`
                 }
             ]
         });
@@ -355,7 +386,7 @@ async function handleStreamingRequest(req, res, query) {
                 question: payload.question || 'Question inconnue',
                 answer: payload.answer || 'Transcription non disponible',
                 score: r.score,
-                audio_path: payload.audio_path,
+                audio_path: getAudioUrl(payload.audio_path),
                 timestamp: payload.timestamp
             };
         });
@@ -386,22 +417,70 @@ async function handleStreamingRequest(req, res, query) {
         }
     }
 
-    sendMeta(res, {
-        step: 'found',
-        sourcesCount: sources.length,
-        sources: sources.slice(0, 5).map(s => ({
-            id: s.id,
-            question: s.question,
-            answer: s.answer,
-            audio_path: getAudioUrl(s.audio_path),
-            score: Math.round(s.score * 100),
-            timestamp: s.timestamp
-        }))
-    });
+    // ===================
+    // Step 5: Sefaria Enrichment
+    // ===================
+    sendMeta(res, { step: 'enriching' });
+    let sefariaContext = "";
+
+    if (openai && (classification.intent === ROUTER_INTENT.SIMPLE_FACT || classification.intent === ROUTER_INTENT.COMPLEX_ANALYSIS)) {
+        try {
+            // Find Halakhic topic slug
+            const topicResponse = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Extract the main Halakhic topic from the question in ONE SINGLE ENGLISH WORD (e.g. "shabbat", "kashrut", "niddah", "kiddush", "tefillah"). If none applies directly, output "general".`
+                    },
+                    { role: 'user', content: query }
+                ],
+                temperature: 0,
+                max_tokens: 10
+            });
+            const slug = topicResponse.choices[0].message.content.trim().toLowerCase();
+
+            if (slug !== 'general') {
+                console.log(`📚 Sefaria Topic identified: ${slug}`);
+                const refs = await getSefariaTopicSources(slug);
+                if (refs && refs.length > 0) {
+                    // Fetch text for the first 2 primary sources to keep context size manageable
+                    const texts = await Promise.all(refs.slice(0, 2).map(r => getSefariaText(r)));
+                    sefariaContext = texts.filter(t => t !== null).join('\n\n');
+                }
+            }
+            console.log(`[DEBUG Stream] Sefaria block completed. Slug was: ${slug || 'none'}`);
+        } catch (e) {
+            console.error('❌ Sefaria enrichment error:', e.message);
+        }
+    }
+
+    console.log(`[DEBUG Stream] Preparing 'found' payload with ${sources.length} sources...`);
+
+    try {
+        const foundPayload = {
+            step: 'found',
+            sourcesCount: sources.length,
+            sources: sources.slice(0, 5).map(s => ({
+                id: s.id,
+                question: s.question,
+                answer: s.answer,
+                audio_path: getAudioUrl(s.audio_path),
+                score: s.score ? Math.round(s.score * 100) : 0,
+                timestamp: s.timestamp || Date.now()
+            }))
+        };
+        console.log(`[DEBUG Stream] Payload array mapped successfully.`);
+        sendMeta(res, foundPayload);
+        console.log(`[DEBUG Stream] 'found' event sent to SSE.`);
+    } catch (mapErr) {
+        console.error(`❌ Error mapping sources:`, mapErr);
+    }
 
     // ===================
-    // Step 5: Stream Response
+    // Step 6: Stream Response
     // ===================
+    console.log(`[DEBUG Stream] Sending 'generating' event.`);
     sendMeta(res, { step: 'generating' });
 
     if (!openai) {
@@ -411,10 +490,10 @@ async function handleStreamingRequest(req, res, query) {
             : "Aucun résultat trouvé.";
         sendChunk(res, fallback);
     } else if (classification.intent === ROUTER_INTENT.SIMPLE_FACT) {
-        await streamSimpleResponse(res, query, sources);
+        await streamSimpleResponse(res, query, sources, sefariaContext);
     } else {
         // COMPLEX_ANALYSIS - Chain of Thought
-        await streamComplexResponse(res, query, sources);
+        await streamComplexResponse(res, query, sources, sefariaContext);
     }
 
     // ===================
