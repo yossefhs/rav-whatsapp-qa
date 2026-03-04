@@ -1152,11 +1152,11 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 RavQA Server v2.0`);
-    console.log(`📍 http://localhost:${PORT}`);
+    console.log(`📍 http://0.0.0.0:${PORT} (Railway/Cloud bound)`);
     console.log(`📂 Database: ${DB_PATH}`);
-    console.log(`🧠 RAG Search: http://localhost:${PORT}/api/rag-search\n`);
+    console.log(`🧠 RAG Search: http://0.0.0.0:${PORT}/api/rag-search\n`);
 });
 
 module.exports = app;
