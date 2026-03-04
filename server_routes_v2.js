@@ -177,11 +177,11 @@ Identifie le sujet halakhique de la question. Cite brièvement (1-2 phrases) une
 Cite directement les enseignements du Rav Abichid d'après les Sources fournies.
 TU DOIS OBLIGATOIREMENT CITER LE NUMÉRO DE LA SOURCE dans ton texte au format [Source X].
 Exemple: "Selon le Rav Abichid [Source 1], il est permis de..." ou "Dans la [Source 2], le Rav précise que..."
-⚠️ ATTENTION: N'utilise QUE les sources qui répondent directement et précisément à la question. Si les sources parlent d'un sujet similaire mais ne traitent pas le cas exact de l'utilisateur, NE LES UTILISE PAS et passe directement à l'étape 3.
+Ne fais pas de réponse générale sans citer précisément de quelle source tu tires l'information.
 
 **ÉTAPE 3 – Conclusion** :
-- SI des sources pertinentes du Rav Abichid existent : conclure d'après sa réponse.
-- SI aucune source ne couvre EXACTEMENT la question : AJOUTER obligatoirement : "⚠️ Il n'y a pas de réponse directe du Rav Abichid sur ce cas exact dans les archives. Veuillez vérifier auprès du Rav."
+- SI des sources du Rav Abichid existent : conclure d'après sa réponse.
+- SI aucune source ne couvre la question : AJOUTER obligatoirement : "⚠️ Il n'y a pas de réponse directe du Rav Abichid sur ce cas exact. La réponse est basée sur les sources générales — veuillez vérifier auprès du Rav."
 
 REMARQUE: Si la question est ambiguë, demande une précision.`
                 },
@@ -254,11 +254,11 @@ Cite rapidement le contexte halakhique grâce aux sources Sefaria pour expliquer
 **2. LE PSAK DU RAV ABICHID (Avec Citations Obligatoires)**:
 Amène la réponse directement d'après les [Source X] de la base de données du Rav Abichid.
 TU DOIS ABSOLUMENT insérer les références [Source 1], [Source 2], etc. dans tes phrases pour prouver d'où tu tires l'information.
-⚠️ ATTENTION: Tu dois être extrêmement strict sur la pertinence. Si la [Source X] mentionne le même grand sujet (ex: le Shabbat) mais ne répond PAS à la question précise posée, ignore-la totalement.
+Exemple: "Le Rav Abichid autorise cela sous certaines conditions [Source 1]. Toutefois, pour les Séfaradim, il ajoute que... [Source 2]."
 
 **3. CONCLUSION DÉFINITIVE** :
-- **Si le Rav Abichid a répondu au cas précis** → Conclure UNIQUEMENT d'après les réponses du Rav.
-- **Si aucune source ne répond exactement à la question** → Conclure brièvement d'après Sefaria, MAIS tu dois OBLIGATOIREMENT mentionner : "Sous réserve de demander au Rav Abichid, car nous n'avons pas d'archives détaillant ce cas précis."
+- **Si le Rav Abichid a répondu** → Conclure UNIQUEMENT d'après les réponses du Rav.
+- **Si aucune réponse du Rav dans les archives** → Conclure brièvement d'après Sefaria, MAIS tu dois OBLIGATOIREMENT mentionner : "Sous réserve de demander au Rav Abichid, car nous n'avons pas d'archives directes sur ce cas précis."
 
 ⚠️ Termine TOUJOURS ta réponse par : "En cas de doute ou pour un cas précis, posez la question directement au Rav Abichid."`
                 },
