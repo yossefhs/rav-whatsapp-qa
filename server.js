@@ -313,38 +313,67 @@ if (process.env.B2_KEY_ID && process.env.B2_APP_KEY && process.env.B2_BUCKET_NAM
                 return res.status(503).send('B2 auth unavailable');
             }
         }
-        const filename = req.params.filename.replace(/\.(ogg|opus)$/i, '.mp3');
-        const bucketName = process.env.B2_BUCKET_NAME;
-        const url = `${b2DownloadUrl}/file/${bucketName}/${filename}`;
 
-        https.get(url, { headers: { Authorization: b2AuthToken } }, (b2Res) => {
-            if (b2Res.statusCode === 401) {
-                // Token expired — re-auth and retry once
-                authorizeB2().then(() => {
-                    https.get(`${b2DownloadUrl}/file/${bucketName}/${filename}`,
-                        { headers: { Authorization: b2AuthToken } },
-                        (retryRes) => {
-                            res.setHeader('Content-Type', 'audio/mpeg');
-                            retryRes.pipe(res);
+        const bucketName = process.env.B2_BUCKET_NAME;
+
+        function tryFetch(ext, isFallback = false) {
+            const currentFilename = req.params.filename.replace(/\.(mp3|ogg|opus)$/i, ext);
+            const url = `${b2DownloadUrl}/file/${bucketName}/${currentFilename}`;
+
+            https.get(url, { headers: { Authorization: b2AuthToken } }, (b2Res) => {
+                if (b2Res.statusCode === 401) {
+                    if (!isFallback) {
+                        // Re-auth once
+                        authorizeB2().then(() => tryFetch(ext, isFallback)).catch(() => res.status(503).send('B2 re-auth failed'));
+                        return;
+                    }
+                    return res.status(401).send('B2 Unauthorized');
+                }
+
+                if (b2Res.statusCode === 404) {
+                    if (ext === '.mp3') return tryFetch('.ogg', true);
+                    if (ext === '.ogg') return tryFetch('.opus', true);
+                    return res.status(404).send('Audio not found in B2');
+                }
+
+                if (b2Res.statusCode === 200) {
+                    if (isFallback) {
+                        // Transcode .ogg or .opus Stream -> MP3
+                        const { spawn } = require('child_process');
+                        const ffmpeg = spawn('ffmpeg', [
+                            '-i', 'pipe:0',
+                            '-f', 'mp3',
+                            '-acodec', 'libmp3lame',
+                            '-q:a', '4',
+                            'pipe:1'
+                        ], { stdio: ['pipe', 'pipe', 'ignore'] });
+
+                        res.setHeader('Content-Type', 'audio/mpeg');
+                        b2Res.pipe(ffmpeg.stdin);
+                        ffmpeg.stdout.pipe(res);
+
+                        ffmpeg.on('error', (e) => {
+                            console.error('B2 FFMPEG error:', e);
+                            if (!res.headersSent) res.status(500).send('Transcoding error');
+                        });
+                        res.on('close', () => { if (!ffmpeg.killed) ffmpeg.kill(); });
+                    } else {
+                        // Direct stream for native .mp3
+                        res.setHeader('Content-Type', 'audio/mpeg');
+                        if (b2Res.headers['content-length']) {
+                            res.setHeader('Content-Length', b2Res.headers['content-length']);
                         }
-                    ).on('error', () => res.status(404).send('Audio unavailable'));
-                }).catch(() => res.status(503).send('B2 auth failed'));
-                return;
-            }
-            if (b2Res.statusCode === 404) {
-                return res.status(404).send('Audio not found in B2');
-            }
-            res.setHeader('Content-Type', 'audio/mpeg');
-            if (b2Res.headers['content-length']) {
-                res.setHeader('Content-Length', b2Res.headers['content-length']);
-            }
-            b2Res.pipe(res);
-        }).on('error', (e) => {
-            console.error(`❌ [B2] Fetch error: ${e.message}`);
-            res.status(500).send('B2 fetch error');
-        });
+                        b2Res.pipe(res);
+                    }
+                } else {
+                    res.status(b2Res.statusCode).send('B2 Fetch Error');
+                }
+            }).on('error', e => res.status(500).send('Network error to B2'));
+        }
+
+        tryFetch('.mp3');
     });
-    console.log('🪣 [B2] Audio proxy enabled at /audio-b2/:filename');
+    console.log('🪣 [B2] Audio proxy enabled at /audio-b2/:filename with FFMPEG fallback');
 }
 
 
