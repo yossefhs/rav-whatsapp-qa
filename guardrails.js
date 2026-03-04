@@ -173,7 +173,7 @@ function calculateConfidence(result, query) {
 // =============================================================================
 
 const MIN_RESPONSE_LENGTH = 30;
-const MIN_VECTOR_SCORE = 0.45; // Augmenté pour garantir une pertinence très stricte
+const MIN_VECTOR_SCORE = 0.35;
 
 /**
  * Valide et filtre la réponse
