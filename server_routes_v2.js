@@ -24,7 +24,12 @@ function getAudioUrl(audioPath) {
     // Always extract just the filename and force .mp3 extension for Safari compatibility
     const mp3Name = path.basename(audioPath).replace(/\.(ogg|opus)$/i, '.mp3');
 
-    // CLOUD MODE (Railway / production): return direct CDN URL (Backblaze B2, S3, etc.)
+    // CLOUD MODE (Railway): proxy via /audio-b2/ route which fetches from private B2 bucket
+    if (process.env.B2_BUCKET_NAME) {
+        return `/audio-b2/${mp3Name}`;
+    }
+
+    // LEGACY CLOUD MODE: direct public CDN URL (e.g. public Backblaze bucket)
     const baseUrl = process.env.MEDIA_BASE_URL;
     if (baseUrl) {
         return `${baseUrl.replace(/\/$/, '')}/${mp3Name}`;

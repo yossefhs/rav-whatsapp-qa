@@ -268,6 +268,86 @@ app.use('/audio', (req, res, next) => {
 app.use('/audio', express.static(MEDIA_DIR));
 console.log(`📂 Audio Directory: ${MEDIA_DIR}`);
 
+// =============================================================================
+// BACKBLAZE B2 AUDIO PROXY (Cloud/Railway Mode)
+// When B2_KEY_ID and B2_APP_KEY are set, proxy /audio-b2/:filename from B2 private bucket.
+// =============================================================================
+if (process.env.B2_KEY_ID && process.env.B2_APP_KEY && process.env.B2_BUCKET_NAME) {
+    const https = require('https');
+
+    let b2AuthToken = null;
+    let b2ApiUrl = null;
+    let b2DownloadUrl = null;
+
+    async function authorizeB2() {
+        return new Promise((resolve, reject) => {
+            const credentials = Buffer.from(`${process.env.B2_KEY_ID}:${process.env.B2_APP_KEY}`).toString('base64');
+            const options = {
+                hostname: 'api.backblazeb2.com',
+                path: '/b2api/v3/b2_authorize_account',
+                headers: { Authorization: `Basic ${credentials}` }
+            };
+            https.get(options, (resp) => {
+                let data = '';
+                resp.on('data', (d) => data += d);
+                resp.on('end', () => {
+                    try {
+                        const json = JSON.parse(data);
+                        b2AuthToken = json.authorizationToken;
+                        b2ApiUrl = json.apiInfo?.storageApi?.apiUrl || json.apiUrl;
+                        b2DownloadUrl = json.apiInfo?.storageApi?.downloadUrl || json.downloadUrl;
+                        console.log(`✅ [B2] Authorized. Download URL: ${b2DownloadUrl}`);
+                        resolve();
+                    } catch (e) { reject(e); }
+                });
+            }).on('error', reject);
+        });
+    }
+
+    // Authorize on startup
+    authorizeB2().catch(e => console.error('❌ [B2] Auth failed:', e.message));
+
+    app.get('/audio-b2/:filename', async (req, res) => {
+        if (!b2AuthToken) {
+            try { await authorizeB2(); } catch (e) {
+                return res.status(503).send('B2 auth unavailable');
+            }
+        }
+        const filename = req.params.filename.replace(/\.(ogg|opus)$/i, '.mp3');
+        const bucketName = process.env.B2_BUCKET_NAME;
+        const url = `${b2DownloadUrl}/file/${bucketName}/${filename}`;
+
+        https.get(url, { headers: { Authorization: b2AuthToken } }, (b2Res) => {
+            if (b2Res.statusCode === 401) {
+                // Token expired — re-auth and retry once
+                authorizeB2().then(() => {
+                    https.get(`${b2DownloadUrl}/file/${bucketName}/${filename}`,
+                        { headers: { Authorization: b2AuthToken } },
+                        (retryRes) => {
+                            res.setHeader('Content-Type', 'audio/mpeg');
+                            retryRes.pipe(res);
+                        }
+                    ).on('error', () => res.status(404).send('Audio unavailable'));
+                }).catch(() => res.status(503).send('B2 auth failed'));
+                return;
+            }
+            if (b2Res.statusCode === 404) {
+                return res.status(404).send('Audio not found in B2');
+            }
+            res.setHeader('Content-Type', 'audio/mpeg');
+            if (b2Res.headers['content-length']) {
+                res.setHeader('Content-Length', b2Res.headers['content-length']);
+            }
+            b2Res.pipe(res);
+        }).on('error', (e) => {
+            console.error(`❌ [B2] Fetch error: ${e.message}`);
+            res.status(500).send('B2 fetch error');
+        });
+    });
+    console.log('🪣 [B2] Audio proxy enabled at /audio-b2/:filename');
+}
+
+
 // Mount Maintenance/Debug Routes (CRITICAL for diagnostics)
 app.use('/api/debug', maintenanceRoutes);
 
