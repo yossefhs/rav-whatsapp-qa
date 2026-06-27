@@ -18,13 +18,14 @@ if (process.env.OPENAI_API_KEY) {
   }
 }
 const { processMessage } = require('./message_processor');
+const { isTargetGroup, getConfiguredGroups, logConfiguredGroups } = require('./groups');
 
 // Configuration
 const MEDIA_DIR = path.join(__dirname, 'media');
 if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ravqa.db');
-const GROUPS = [process.env.GROUP_1, process.env.GROUP_2].filter(Boolean);
+const GROUPS = getConfiguredGroups();
 
 // Client WhatsApp
 const client = new Client({
@@ -77,12 +78,17 @@ async function catchUpFromDate(sinceTs) {
 
   try {
     const chats = await client.getChats();
-    const targets = chats.filter(c => c.isGroup && GROUPS.includes(c.name));
+    const targets = chats.filter(c => c.isGroup && isTargetGroup(c.name));
 
     if (targets.length === 0) {
       console.log('⚠️ No target groups found for catch-up.');
+      const groupNames = chats.filter(c => c.isGroup).map(c => `"${c.name}"`);
+      console.log(`ℹ️ Groupes visibles par le bot : [${groupNames.join(', ')}]`);
+      console.log(`ℹ️ Groupes configurés : [${getConfiguredGroups().map(g => `"${g}"`).join(', ')}]`);
       return 0;
     }
+
+    console.log(`📂 ${targets.length} groupe(s) ciblé(s) trouvé(s) : ${targets.map(c => `"${c.name}"`).join(', ')}`);
 
     let totalProcessed = 0;
 
@@ -188,7 +194,7 @@ client.on('qr', async (qr) => {
 
 client.on('ready', async () => {
   console.log('✅ Client is ready!');
-  console.log(`Target Groups: ${GROUPS.join(', ')}`);
+  logConfiguredGroups();
 
   // Initial Catch-up
   setTimeout(() => {

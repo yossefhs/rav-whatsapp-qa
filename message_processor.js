@@ -9,6 +9,7 @@ const { enrichTorah } = require('./enrich_torah');
 const { enhancedMatchAnswerToQuestion } = require('./enhanced_matcher');
 const { processEntry } = require('./torah_transcription');
 const firebaseSync = require('./firebase_sync'); // NOUVEAU: Real-time Firebase sync
+const { isTargetGroup } = require('./groups'); // Gestion centralisée des groupes (hommes/femmes)
 
 const MEDIA_DIR = path.join(__dirname, 'media');
 if (!fs.existsSync(MEDIA_DIR)) fs.mkdirSync(MEDIA_DIR);
@@ -94,10 +95,9 @@ async function processMessage(msg, { isCatchUp = false } = {}) {
     try {
         const chat = await msg.getChat();
 
-        // Vérifier si c'est un groupe ciblé
+        // Vérifier si c'est un groupe ciblé (hommes / femmes / autres)
         if (!chat.isGroup) return;
-        const GROUPS = [process.env.GROUP_1, process.env.GROUP_2].filter(Boolean);
-        if (GROUPS.length && !GROUPS.includes(chat.name)) return;
+        if (!isTargetGroup(chat.name, { warn: !isCatchUp })) return;
 
         if (!isCatchUp) {
             console.log(`📥 Message reçu de ${chat.name} (${msg.type})`);
