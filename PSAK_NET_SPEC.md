@@ -18,7 +18,11 @@ Conditions (TOUTES obligatoires) :
    OU `link_confidence ≥ 0.80` validé.
 3. **La transcription est saine** : pas de drapeau `[PASSAGE INCOMPRÉHENSIBLE À VÉRIFIER SUR L'AUDIO]`,
    `transcript_torah` non vide.
-4. **Double vérification LLM (juge)** : un appel indépendant (temperature 0) reçoit la nouvelle
+4. **Sources complètes OBLIGATOIRES** : la question d'origine posée au Rav ET l'audio source
+   de sa réponse doivent exister et être joints au message. Sans l'un des deux, le candidat
+   est inutilisable (ni A ni B), quel que soit son score — c'est la garantie de
+   vérification humaine absolue.
+5. **Double vérification LLM (juge)** : un appel indépendant (temperature 0) reçoit la nouvelle
    question + la Q/R retrouvée et répond `MATCH_EXACT / MATCH_PROCHE / NO_MATCH`.
    Verdict A exige `MATCH_EXACT`.
 

@@ -50,6 +50,13 @@ const message = formaterReponse(resultat);
 **Aucune synthèse générative sur le chemin psak** : en A et B le texte du psak
 est la transcription validée, citée telle quelle.
 
+> **INVARIANT PSAK (non négociable)** : tout psak servi (Verdict A comme B)
+> porte TOUJOURS la question d'origine posée au Rav ET le lien audio source.
+> Un candidat sans question d'origine ou sans audio est écarté par le moteur
+> (`sourceComplete()`), quel que soit son score. Si une réponse importante est
+> écartée pour cette raison, la correction est côté données (retrouver
+> l'audio_path / relier la question), jamais côté assouplissement du moteur.
+
 ## 3. Prérequis données (importants)
 
 1. **`score` doit être une similarité question↔question.** Si l'index actuel

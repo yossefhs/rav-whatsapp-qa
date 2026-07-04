@@ -45,11 +45,24 @@ function transcriptionSaine(c) {
 }
 
 /**
+ * INVARIANT PSAK : un psak servi (Verdict A comme B) doit TOUJOURS porter
+ * la question d'origine posée au Rav ET l'audio source de sa réponse —
+ * c'est ce qui permet la vérification humaine absolue. Sans l'un des deux,
+ * le candidat est inutilisable, quel que soit son score.
+ */
+function sourceComplete(c) {
+    if (!c.question || !String(c.question).trim()) return false;
+    if (!c.audioUrl || !String(c.audioUrl).trim()) return false;
+    return true;
+}
+
+/**
  * Un candidat "citable" peut produire un Verdict A.
  * Un candidat sain mais au lien non prouvé plafonne au Verdict B.
  */
 function classerCandidat(c) {
     if (!transcriptionSaine(c)) return 'inutilisable';
+    if (!sourceComplete(c)) return 'inutilisable';
     if (!lienFiable(c)) return 'plafonne_B';
     return 'citable';
 }
@@ -93,7 +106,7 @@ async function jugerCorrespondance(nouvelleQuestion, candidat, opts = {}) {
         messages: [{
             role: 'user',
             content: `NOUVELLE QUESTION :\n${nouvelleQuestion}\n\n` +
-                `QUESTION DÉJÀ POSÉE AU RAV :\n${candidat.question || '(question d\'origine indisponible)'}\n\n` +
+                `QUESTION DÉJÀ POSÉE AU RAV :\n${candidat.question}\n\n` +
                 `RÉPONSE DU RAV (transcription validée) :\n${candidat.answer}`,
         }],
     };
@@ -177,19 +190,21 @@ function formaterDate(ts) {
 function formaterReponse(resultat) {
     const { verdict, source } = resultat;
 
+    // Invariant : en A comme en B, `source` a passé sourceComplete() —
+    // question d'origine et audio sont toujours présents, jamais optionnels.
     if (verdict === VERDICT.PSAK_CONFIRME) {
         const date = formaterDate(source.timestamp);
         return `✅ *Le Rav a déjà répondu à cette question.*\n\n` +
+            `❓ Question d'origine${date ? ` (${date})` : ''} : "${source.question.trim()}"\n\n` +
             `📖 *Psak du Rav :*\n${source.answer.trim()}\n\n` +
-            (source.audioUrl ? `🎧 Écouter la réponse du Rav : ${source.audioUrl}\n` : '') +
-            `📅 Question d'origine${date ? ` (${date})` : ''} : "${(source.question || '').trim()}"`;
+            `🎧 Écouter la réponse du Rav (source) : ${source.audioUrl}`;
     }
 
     if (verdict === VERDICT.QUESTION_PROCHE) {
         return `🟡 *Je n'ai pas trouvé cette question exacte, mais le Rav a répondu à une question proche :*\n\n` +
-            `❓ Question posée à l'époque : "${(source.question || '').trim()}"\n` +
+            `❓ Question posée à l'époque : "${source.question.trim()}"\n` +
             `📖 Réponse du Rav dans CE cas-là :\n${source.answer.trim()}\n` +
-            (source.audioUrl ? `🎧 Audio : ${source.audioUrl}\n` : '') +
+            `🎧 Audio source : ${source.audioUrl}\n` +
             `\n⚠️ Votre cas n'est pas identique — posez votre question au Rav pour un psak sur votre situation.`;
     }
 
@@ -203,4 +218,4 @@ function formaterReponse(resultat) {
         `Posez-la directement au Rav dans le groupe.`;
 }
 
-module.exports = { CONFIG, VERDICT, deciderVerdict, formaterReponse, jugerCorrespondance, classerCandidat };
+module.exports = { CONFIG, VERDICT, deciderVerdict, formaterReponse, jugerCorrespondance, classerCandidat, sourceComplete };
