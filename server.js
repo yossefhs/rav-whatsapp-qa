@@ -1154,6 +1154,13 @@ setupRAGEndpoints(app);
 setupAIAssistantEndpoints(app);
 
 // =============================================================================
+// PSAK NET - Politique de décision à 3 verdicts (voir PSAK_NET_SPEC.md)
+// =============================================================================
+
+const { setupPsakEndpoints } = require('./psak_net/routes');
+setupPsakEndpoints(app);
+
+// =============================================================================
 // SPA - Serve frontend (MUST BE LAST - catch-all)
 // =============================================================================
 

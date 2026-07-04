@@ -1,5 +1,12 @@
 # Intégration du moteur Psak Net dans le bot live
 
+> **Implémentation de référence exécutable dans CE dépôt** : `psak_net/routes.js`
+> expose `POST /api/psak` + `GET /api/psak/health`, branchés dans `server.js` via
+> `setupPsakEndpoints(app)`, avec `psak_net/candidats.js` comme hydrateur
+> (question d'origine par preuve : reply > lien > question portée). Testé de bout
+> en bout sur la vraie ravqa.db. Le bot du Mac peut soit copier `psak_net/`,
+> soit appeler directement cet endpoint. État des données : `AUDIT_DONNEES.md`.
+
 > Cible : le bot WhatsApp sur le Mac (`/Users/admin/whatsapp-web.js`).
 > Copier le dossier `psak_net/` tel quel dans le projet du bot. Zéro dépendance
 > (fetch natif, Node >= 18). Le juge appelle l'API Anthropic avec la clé déjà
