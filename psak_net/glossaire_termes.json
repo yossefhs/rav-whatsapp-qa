@@ -1,0 +1,63 @@
+{
+  "_meta": {
+    "description": "Glossaire canonique des termes hébreux/Torah/Halakha — source de vérité UNIQUE pour le bot WhatsApp, le site ravabichid.org et la normalisation des requêtes.",
+    "style": "séfarade francophone (communauté du Rav Abichid)",
+    "regles_application": [
+      "Remplacement borné aux mots entiers (word boundaries), insensible à la casse en détection.",
+      "Ordre d'application : variantes les plus LONGUES d'abord, passe unique avec sentinelles en caractères de contrôle (anti-cascade, cf. bug Pessa'h'h).",
+      "La casse de la 1re lettre suit la position dans la phrase, SAUF majuscule forcée par le champ 'majuscule'.",
+      "Écriture UNIQUEMENT dans transcript_torah_edited ; transcript_raw jamais modifié ; chaque changement journalisé dans edits_log (editor='glossaire_v1').",
+      "Ce fichier est vivant : toute correction admin récurrente (edits_log) doit y être reversée."
+    ],
+    "interdits": [
+      "JAMAIS de substitution nom→adjectif ou changement grammatical ('halav'→''halavi' INTERDIT : changement de sens).",
+      "JAMAIS toucher un mot français ordinaire, un nombre, ou l'ordre des mots."
+    ],
+    "version": 1
+  },
+  "termes": [
+    { "canonique": "Chabbat", "majuscule": true, "variantes": ["chabat", "chabath", "chabbath", "shabat", "shabbat", "shabbath", "sabbat"] },
+    { "canonique": "Halakha", "majuscule": true, "variantes": ["alakha", "halacha", "alacha", "halaha", "halakhah"] },
+    { "canonique": "brakha", "variantes": ["bracha", "brakhah", "brocha"] },
+    { "canonique": "brakhot", "variantes": ["brachot", "brakhots", "brachots"] },
+    { "canonique": "bérakha", "variantes": ["beracha", "berakhah", "beraha"] },
+    { "canonique": "mitsva", "variantes": ["mitzvah", "mitsvah", "mitzva", "mistva"] },
+    { "canonique": "mitsvot", "variantes": ["mitzvot", "mitsvoth", "mitzvoth"] },
+    { "canonique": "Pessa'h", "majuscule": true, "variantes": ["pessah", "pesah", "pessach", "pesach", "pessa h"] },
+    { "canonique": "'hamets", "variantes": ["hamets", "hametz", "chametz", "hames"] },
+    { "canonique": "Choul'han Aroukh", "majuscule": true, "variantes": ["choulhan aroukh", "choulchan aroukh", "choulhane aroukh", "shulchan aruch", "choulhan arouh", "choulhan haroukh"] },
+    { "canonique": "mouktsé", "variantes": ["moukse", "mouktse", "muktzeh", "mouktze", "moukce"] },
+    { "canonique": "sé'ouda", "variantes": ["seouda", "seuda", "séouda", "se'ouda"] },
+    { "canonique": "Amida", "majuscule": true, "variantes": ["hamida", "amidah", "haamida"] },
+    { "canonique": "Plag Ha'Minha", "majuscule": true, "variantes": ["plag aminha", "plag haminha", "plag amin'ha", "plag ha minha"] },
+    { "canonique": "Kiddouch", "majuscule": true, "variantes": ["kidouch", "kiddush", "kidoush", "quidouch"] },
+    { "canonique": "Havdala", "majuscule": true, "variantes": ["avdala", "havdalah", "abdala"] },
+    { "canonique": "téfilines", "variantes": ["tefilin", "tefiline", "tefilines", "tfiline", "tfilines", "tephilines"] },
+    { "canonique": "Torah", "majuscule": true, "variantes": ["thora", "tora", "torah"] },
+    { "canonique": "Guemara", "majuscule": true, "variantes": ["gemara", "guemarah", "gmara", "guemara"] },
+    { "canonique": "Michna", "majuscule": true, "variantes": ["mishna", "michnah", "mishnah"] },
+    { "canonique": "nidda", "variantes": ["nida", "niddah", "nidah"] },
+    { "canonique": "mikvé", "variantes": ["mikve", "mikveh", "mikwe", "miqve"] },
+    { "canonique": "Yom Tov", "majuscule": true, "variantes": ["yom tov", "yontov", "yom-tov"] },
+    { "canonique": "netilat yadayim", "variantes": ["netilat yadaim", "netilas yadayim", "nétilat yadayim"] },
+    { "canonique": "tsniout", "variantes": ["tsnious", "tznius", "tsniut", "tzniout"] },
+    { "canonique": "cacherout", "variantes": ["kashrout", "cashrout", "kacherout", "cacheroute"] },
+    { "canonique": "Birkat Hamazon", "majuscule": true, "variantes": ["birkat amazon", "birkat hamazone", "birkat amazone"] },
+    { "canonique": "Minha", "majuscule": true, "variantes": ["minha", "min'ha", "minkha"] },
+    { "canonique": "Arvit", "majuscule": true, "variantes": ["arvit", "aravit"] },
+    { "canonique": "Cha'harit", "majuscule": true, "variantes": ["chaharit", "shaharit", "chakharit", "sha'harit"] },
+    { "canonique": "mezouza", "variantes": ["mezuza", "mezouzah", "mezuzah"] },
+    { "canonique": "kachérisation", "variantes": ["cacherisation", "kacherisation", "cachérisation"] }
+  ],
+  "a_valider_par_admin": [
+    {
+      "question": "Graphie de 'cacher/kacher' (adjectif)",
+      "options": ["cacher", "kacher", "cachère"],
+      "note": "Vrai choix de style communautaire — ne pas appliquer avant validation humaine. Idem pour le pluriel."
+    },
+    {
+      "question": "Faut-il aussi normaliser les questions des membres (question_text) ?",
+      "recommandation": "NON en base (c'est leur parole), OUI à la volée côté recherche (normaliser la requête avant embedding/FTS avec ce même glossaire)."
+    }
+  ]
+}
