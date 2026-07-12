@@ -8,6 +8,25 @@
 
 ---
 
+## 🚨 D0 — URGENT (2026-07-12) : sortie de rodage de l'ingestion — EN RETARD ⬜
+
+Le rodage 48 h lancé le 05/07 devait se terminer le 07-08/07. Nous sommes le
+12/07 : **toutes les captures depuis 7 jours sont gelées à `psak_ready=0`**
+(rien n'est servi ni synchronisé vers Turso). À faire EN PREMIER :
+
+1. `node src/ingest/acceptance.mjs` → vérifier les critères §5 de
+   INGESTION_QUOTIDIENNE.md sur les 7 jours réels de capture (bien plus que 48 h).
+2. Vérifier les logs `🎙️ audio de groupe` accumulés → identifier le(s) @lid réel(s)
+   du Rav → compléter `RAV_AUDIO_SENDERS` si besoin.
+3. Si critères OK : `node src/ingest/promote.mjs --dry` (aperçu), puis
+   `promote.mjs` (rétro-promotion des paires éligibles des 7 jours).
+4. Passer `INGEST_RODAGE=0` dans le plist + recharger le satellite.
+5. Vérifier que le cron Turso 03h00 publie bien les paires promues.
+6. Rapport : nb de questions capturées / audios du Rav / paires reply prouvées
+   sur les 7 jours, et tout critère §5 en échec (avec cause).
+
+---
+
 ## 📌 Directive 2026-07-06 — Lisibilité des transcriptions & routage des réponses
 
 **Contexte** : un membre a reçu une réponse illisible — transcripts Whisper avec
